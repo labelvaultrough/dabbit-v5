@@ -15,7 +15,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useHabits } from '@/context/HabitContext';
 import { metrics } from '@/constants/metrics';
 import { Feather } from '@expo/vector-icons';
-import { Habit, FrequencyType } from '@/types/habit';
+import { Habit, FrequencyType, Frequency } from '@/types/habit';
 import { Dropdown } from './Dropdown';
 import { TimePickerField } from './TimePickerField';
 
@@ -105,38 +105,71 @@ export const HabitForm = ({ habit, onClose, onSave }: HabitFormProps) => {
   };
 
   const handleSave = async () => {
-    // Validate the form
-    if (!validateForm()) {
+    // Validate form first
+    const errors: {
+      name?: string;
+      category?: string;
+      time?: string;
+    } = {};
+
+    if (!name.trim()) {
+      errors.name = 'Name is required';
+    }
+
+    if (!selectedCategory) {
+      errors.category = 'Category is required';
+    }
+
+    if (reminderEnabled && !selectedTime) {
+      errors.time = 'Time is required for reminders';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      setShowValidationErrors(true);
       return;
     }
 
-    // Format time to HH:MM string if selected
-    const timeString = selectedTime 
-      ? `${selectedTime.getHours().toString().padStart(2, '0')}:${selectedTime.getMinutes().toString().padStart(2, '0')}` 
-      : undefined;
+    // Format time if set
+    let formattedTime: string | undefined;
+    if (selectedTime) {
+      const hours = selectedTime.getHours().toString().padStart(2, '0');
+      const minutes = selectedTime.getMinutes().toString().padStart(2, '0');
+      formattedTime = `${hours}:${minutes}`;
+    }
 
-    const habitData = {
-      name: name.trim(),
-      frequency: {
-        type: frequencyType,
-        custom_days: frequencyType === 'custom' ? selectedDays : undefined,
-      },
-      category: selectedCategory,
-      time: timeString,
-      reminderEnabled,
-      archived: false,
+    // Prepare frequency data
+    const frequency: Frequency = {
+      type: frequencyType,
+      ...(frequencyType === 'custom' ? { custom_days: selectedDays } : {}),
     };
 
     if (habit) {
+      // Editing existing habit
       await updateHabit({
         ...habit,
-        ...habitData,
+        name,
+        frequency,
+        category: selectedCategory,
+        time: formattedTime,
+        reminderEnabled, // Include the reminder setting
       });
     } else {
-      await addHabit(habitData);
+      // Adding new habit
+      await addHabit({
+        name,
+        frequency,
+        category: selectedCategory,
+        time: formattedTime,
+        reminderEnabled, // Include the reminder setting
+        archived: false,
+      });
     }
 
-    onSave();
+    if (onSave) {
+      onSave();
+    }
+    onClose();
   };
 
   const toggleDay = (day: number) => {

@@ -9,6 +9,17 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { HabitProvider } from '@/context/HabitContext';
 import { TimeBlockProvider } from '@/context/TimeBlockContext';
+import { NotificationProvider } from '@/context/NotificationContext';
+import * as Notifications from 'expo-notifications';
+
+// Configure notification handler for the entire app
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -33,11 +44,13 @@ export default function RootLayout() {
       <ThemeProvider>
         <HabitProvider>
           <TimeBlockProvider>
-            <Stack>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
-            </Stack>
-            <StatusBar style="auto" />
+            <NotificationProvider>
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
+              </Stack>
+              <StatusBar style="auto" />
+            </NotificationProvider>
           </TimeBlockProvider>
         </HabitProvider>
       </ThemeProvider>

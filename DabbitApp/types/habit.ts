@@ -44,4 +44,9 @@ export interface Reminder {
   time: string; // 24h format: HH:MM
   days: number[]; // 0-6, where 0 is Sunday
   enabled: boolean;
+}
+
+// Global app settings
+export interface GlobalSettings {
+  remindersEnabled: boolean;
 } 

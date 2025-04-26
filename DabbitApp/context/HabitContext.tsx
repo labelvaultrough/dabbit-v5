@@ -1,16 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format, isToday, parseISO, subDays } from 'date-fns';
-import { Habit, HabitEntry, Category } from '@/types/habit';
+import { Habit, HabitEntry, Category, GlobalSettings } from '@/types/habit';
 
 // Define types for our context
 type HabitContextType = {
   habits: Habit[];
   categories: Category[];
   username: string;
-  globalSettings: {
-    remindersEnabled: boolean;
-  };
+  globalSettings: GlobalSettings;
   setUsername: (name: string) => Promise<void>;
   setGlobalRemindersEnabled: (enabled: boolean) => Promise<void>;
   addHabit: (habit: Omit<Habit, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
@@ -185,9 +183,7 @@ export function HabitProvider({ children }: { children: React.ReactNode }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [username, setUsernameState] = useState<string>('Abhishek');
   const [isFirstLaunch, setIsFirstLaunch] = useState(true);
-  const [globalSettings, setGlobalSettings] = useState<{
-    remindersEnabled: boolean;
-  }>({
+  const [globalSettings, setGlobalSettings] = useState<GlobalSettings>({
     remindersEnabled: true, // default to enabled
   });
 
@@ -387,6 +383,10 @@ export function HabitProvider({ children }: { children: React.ReactNode }) {
       };
       setHabitEntries(prevEntries => [...prevEntries, newEntry]);
     }
+
+    // Reset notification record when habit is checked
+    // This will be handled by the notification service via a custom hook
+    // The actual reset logic occurs in the NotificationProvider
   };
 
   // Get habit completion status for a specific date

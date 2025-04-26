@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, Alert, SafeAreaView, Platform } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { useHabits } from '@/context/HabitContext';
+import { useNotificationContext } from '@/context/NotificationContext';
 import { Header } from '@/components/Header';
 import { SettingsItem } from '@/components/SettingsItem';
 import { metrics } from '@/constants/metrics';
@@ -23,9 +24,10 @@ Notifications.setNotificationHandler({
 export default function SettingsScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
   const { globalSettings, setGlobalRemindersEnabled } = useHabits();
+  const { checkForDueNotifications } = useNotificationContext();
   const router = useRouter();
   
-  // State for the time block modal
+  // State for modals
   const [showTimeBlockModal, setShowTimeBlockModal] = useState(false);
   
   // Request notification permissions when toggling notifications on
@@ -40,10 +42,14 @@ export default function SettingsScreen() {
         );
         return;
       }
+      
+      // If enabling notifications, check if any habits need notifications now
+      await setGlobalRemindersEnabled(value);
+      await checkForDueNotifications();
+    } else {
+      // Just disable notifications
+      await setGlobalRemindersEnabled(value);
     }
-    
-    // Update global setting in context
-    await setGlobalRemindersEnabled(value);
   };
 
   const navigateToTimeBlocks = () => {
