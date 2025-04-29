@@ -128,7 +128,7 @@ export const BucketDropdown = ({ selectedBucket, onSelectBucket }: BucketDropdow
         <Feather 
           name={isOpen ? "chevron-up" : "chevron-down"} 
           size={16} 
-          color={colors.text} 
+          color={colors.iconTint} 
           style={styles.icon}
         />
       </TouchableOpacity>
@@ -204,7 +204,7 @@ export const BucketDropdown = ({ selectedBucket, onSelectBucket }: BucketDropdow
                   style={[
                     styles.currentTimeDot,
                     { 
-                      backgroundColor: colors.error,
+                      backgroundColor: colors.energyIcon,
                       width: pulseAnim.interpolate({
                         inputRange: [1, 1.5],
                         outputRange: [8, 12]
@@ -249,37 +249,35 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     zIndex: 1000,
   },
-  bucketEmoji: {
-    fontSize: 16,
-    marginRight: 8,
-  },
-  bucketText: {
-    fontSize: metrics.fontSize.s,
-    fontWeight: '500',
-    flex: 1,
-  },
-  icon: {
-    marginLeft: 4,
-  },
   dropdown: {
     position: 'absolute',
-    zIndex: 1001,
-    left: 0,
-    borderRadius: metrics.borderRadius.medium,
     borderWidth: 1,
+    borderRadius: metrics.borderRadius.medium,
     overflow: 'hidden',
+    zIndex: 2000,
   },
   dropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: metrics.spacing.m,
-    paddingVertical: metrics.spacing.s,
+    paddingVertical: metrics.spacing.m,
   },
-  dropdownItemText: {
-    fontSize: metrics.fontSize.s,
+  bucketEmoji: {
+    fontSize: 20,
+    marginRight: metrics.spacing.s,
+  },
+  bucketText: {
+    fontSize: metrics.fontSize.m,
     flex: 1,
   },
-  currentTimeDot: {
+  dropdownItemText: {
+    fontSize: metrics.fontSize.m,
+    flex: 1,
+  },
+  icon: {
     marginLeft: metrics.spacing.xs,
+  },
+  currentTimeDot: {
+    marginLeft: metrics.spacing.s,
   },
 }); 

@@ -59,6 +59,9 @@ export const HabitItem = ({ habit, date, onPress, onEdit, onDelete }: HabitItemP
     ? colors.categories[category.color as keyof typeof colors.categories] 
     : colors.primary;
   
+  // Ensure we're using a string for colors
+  const categoryColorStr = typeof categoryColor === 'string' ? categoryColor : colors.primary;
+  
   useEffect(() => {
     Animated.timing(animatedValue, {
       toValue: completed ? 1 : 0,
@@ -72,7 +75,7 @@ export const HabitItem = ({ habit, date, onPress, onEdit, onDelete }: HabitItemP
     outputRange: [1, 1.2, 1],
   });
   
-  const backgroundColor = completed ? `${categoryColor}20` : 'transparent';
+  const backgroundColor = completed ? `${categoryColorStr}20` : 'transparent';
 
   const handleEdit = () => {
     setMenuVisible(false);
@@ -100,27 +103,46 @@ export const HabitItem = ({ habit, date, onPress, onEdit, onDelete }: HabitItemP
             borderColor: colors.border,
           }
         ]}
-        onPress={() => onPress(habit.id)}
+        onPress={() => {
+          // Always toggle completion, regardless of duration
+          onPress(habit.id);
+        }}
         activeOpacity={0.8}
       >
         <View style={styles.contentContainer}>
           <View style={styles.textContainer}>
             <View style={styles.titleContainer}>
-              {timeBucket && (
+              {/* Show custom icon if available, otherwise show time bucket emoji */}
+              {habit.icon ? (
+                <View style={[styles.iconWrapper, { backgroundColor: `${categoryColorStr}20` }]}>
+                  <Feather name={habit.icon as any} size={24} color={categoryColorStr} />
+                </View>
+              ) : timeBucket ? (
                 <Text style={styles.timeEmoji}>
                   {timeBucket.emoji}
                 </Text>
-              )}
+              ) : null}
+              
               {category && (
                 <View 
                   style={[
                     styles.categoryDot, 
-                    { backgroundColor: categoryColor }
+                    { backgroundColor: categoryColorStr }
                   ]}
                 />
               )}
               <Text style={[styles.title, { color: colors.text }]}>{habit.name}</Text>
             </View>
+            
+            {/* Show duration indicator if habit has a duration */}
+            {habit.duration && (
+              <View style={styles.durationContainer}>
+                <Feather name="clock" size={14} color={colors.textSecondary} />
+                <Text style={[styles.durationText, { color: colors.textSecondary }]}>
+                  {habit.duration} min
+                </Text>
+              </View>
+            )}
           </View>
           
           <View style={styles.rightContainer}>
@@ -147,14 +169,14 @@ export const HabitItem = ({ habit, date, onPress, onEdit, onDelete }: HabitItemP
               <Feather 
                 name={completed ? "check-circle" : "circle"} 
                 size={metrics.iconSize.large} 
-                color={completed ? categoryColor : colors.border} 
+                color={completed ? categoryColorStr : colors.border} 
               />
             </Animated.View>
           </View>
         </View>
       </TouchableOpacity>
-
-      {/* Menu Modal */}
+      
+      {/* Options Menu Modal */}
       <Modal
         visible={menuVisible}
         transparent
@@ -163,34 +185,31 @@ export const HabitItem = ({ habit, date, onPress, onEdit, onDelete }: HabitItemP
       >
         <TouchableOpacity 
           style={styles.modalOverlay} 
-          activeOpacity={1}
+          activeOpacity={1} 
           onPress={() => setMenuVisible(false)}
         >
           <View 
             style={[
-              styles.menuContainer, 
-              { 
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-              }
+              styles.menuContainer,
+              { backgroundColor: colors.background, borderColor: colors.border }
             ]}
           >
             <TouchableOpacity 
-              style={styles.menuItem}
+              style={styles.menuItem} 
               onPress={handleEdit}
             >
-              <Feather name="edit-2" size={metrics.iconSize.medium} color={colors.text} />
-              <Text style={[styles.menuText, { color: colors.text }]}>Edit Habit</Text>
+              <Feather name="edit" size={20} color={colors.text} />
+              <Text style={[styles.menuText, { color: colors.text }]}>Edit</Text>
             </TouchableOpacity>
             
             <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
             
             <TouchableOpacity 
-              style={styles.menuItem}
+              style={styles.menuItem} 
               onPress={handleDelete}
             >
-              <Feather name="trash-2" size={metrics.iconSize.medium} color={colors.error} />
-              <Text style={[styles.menuText, { color: colors.error }]}>Delete Habit</Text>
+              <Feather name="trash-2" size={20} color={colors.error} />
+              <Text style={[styles.menuText, { color: colors.error }]}>Delete</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -230,6 +249,22 @@ const styles = StyleSheet.create({
   timeEmoji: {
     fontSize: 24,
     marginRight: metrics.spacing.s,
+  },
+  iconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: metrics.spacing.s,
+  },
+  durationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  durationText: {
+    fontSize: metrics.fontSize.xs,
+    marginLeft: metrics.spacing.xs,
   },
   rightContainer: {
     flexDirection: 'row',

@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import { TimeBlockModal } from '@/components/TimeBlockModal';
 import * as Notifications from 'expo-notifications';
 import { requestNotificationPermissions } from '@/utils/notificationUtils';
+import { ProfileCard } from '@/components/ProfileCard';
 
 // Configure notification handler
 Notifications.setNotificationHandler({
@@ -23,12 +24,16 @@ Notifications.setNotificationHandler({
 
 export default function SettingsScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
-  const { globalSettings, setGlobalRemindersEnabled } = useHabits();
+  const { globalSettings, setGlobalRemindersEnabled, username, habits } = useHabits();
   const { checkForDueNotifications } = useNotificationContext();
   const router = useRouter();
   
   // State for modals
   const [showTimeBlockModal, setShowTimeBlockModal] = useState(false);
+  
+  // Get active habits count and current streak
+  const activeHabitsCount = habits.filter(habit => !habit.archived).length;
+  const currentStreak = 7; // Placeholder, would be calculated in a real app
   
   // Request notification permissions when toggling notifications on
   const handleNotificationsToggle = async (value: boolean) => {
@@ -109,6 +114,13 @@ export default function SettingsScreen() {
       <Header title="Settings" />
       
       <ScrollView style={styles.content}>
+        {/* Profile Card */}
+        <ProfileCard 
+          name={username}
+          streak={currentStreak}
+          habitCount={activeHabitsCount}
+        />
+        
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
             APPEARANCE
@@ -155,54 +167,11 @@ export default function SettingsScreen() {
           </Text>
           
           <SettingsItem
-            title="Export Data"
-            subtitle="Save your habits and progress"
-            icon="download"
-            iconColor={colors.success}
-            onPress={() => Alert.alert('Coming Soon', 'This feature will be available in a future update.')}
-          />
-          
-          <SettingsItem
-            title="Import Data"
-            subtitle="Restore from a backup"
-            icon="upload"
-            iconColor={colors.primary}
-            onPress={() => Alert.alert('Coming Soon', 'This feature will be available in a future update.')}
-          />
-          
-          <SettingsItem
             title="Clear All Data"
             subtitle="Delete all habits and progress"
             icon="trash-2"
             iconColor={colors.error}
             onPress={handleClearData}
-          />
-        </View>
-        
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-            ABOUT
-          </Text>
-          
-          <SettingsItem
-            title="Version"
-            subtitle="1.0.0"
-            icon="info"
-            iconColor={colors.primary}
-          />
-          
-          <SettingsItem
-            title="Privacy Policy"
-            icon="lock"
-            iconColor={colors.primary}
-            onPress={() => Alert.alert('Coming Soon', 'This feature will be available in a future update.')}
-          />
-          
-          <SettingsItem
-            title="Terms of Service"
-            icon="file-text"
-            iconColor={colors.primary}
-            onPress={() => Alert.alert('Coming Soon', 'This feature will be available in a future update.')}
           />
         </View>
         
@@ -219,13 +188,13 @@ export default function SettingsScreen() {
             onPress={() => Alert.alert('Coming Soon', 'Authentication system will be implemented in a future update.')}
           />
         </View>
+        
+        {/* Time Block Modal */}
+        <TimeBlockModal
+          visible={showTimeBlockModal}
+          onClose={() => setShowTimeBlockModal(false)}
+        />
       </ScrollView>
-      
-      {/* Time Block Customization Modal */}
-      <TimeBlockModal 
-        visible={showTimeBlockModal}
-        onClose={() => setShowTimeBlockModal(false)}
-      />
     </SafeAreaView>
   );
 }

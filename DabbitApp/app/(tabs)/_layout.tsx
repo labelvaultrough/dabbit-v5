@@ -1,11 +1,44 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '@/context/ThemeContext';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 
-function TabBarIcon({ name, color }: { name: React.ComponentProps<typeof Feather>['name']; color: string }) {
+function TabBarIcon({ 
+  name, 
+  color, 
+  isActive 
+}: { 
+  name: React.ComponentProps<typeof Feather>['name']; 
+  color: string;
+  isActive: boolean;
+}) {
+  const { colors } = useTheme();
+  
+  if (isActive) {
+    return (
+      <View style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}>
+        <LinearGradient
+          colors={colors.primaryGradient as [string, string, ...string[]]}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            borderRadius: 20,
+            opacity: 0.1
+          }}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+        <Feather size={24} name={name} color={colors.primary} />
+      </View>
+    );
+  }
+  
   return <Feather size={24} name={name} color={color} />;
 }
 
@@ -41,24 +74,24 @@ export default function TabLayout() {
           ) : null,
       }}>
       <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Today',
-          tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="progress"
         options={{
           title: 'Progress',
-          tabBarIcon: ({ color }) => <TabBarIcon name="bar-chart-2" color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabBarIcon name="bar-chart-2" color={color} isActive={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Today',
+          tabBarIcon: ({ color, focused }) => <TabBarIcon name="home" color={color} isActive={focused} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color }) => <TabBarIcon name="settings" color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabBarIcon name="settings" color={color} isActive={focused} />,
         }}
       />
     </Tabs>

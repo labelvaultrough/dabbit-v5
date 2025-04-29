@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ViewStyle, TextStyle } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { useHabits } from '@/context/HabitContext';
 import { metrics } from '@/constants/metrics';
-import { Feather } from '@expo/vector-icons';
 import { format, isSameMonth, isToday } from 'date-fns';
 import { Habit } from '@/types/habit';
 
@@ -19,72 +18,85 @@ export const CalendarView = ({
   habit, 
   onSelectDate,
   year,
-  month
+  month 
 }: CalendarViewProps) => {
   const { colors } = useTheme();
   const { getHabitCompletionStatus, categories } = useHabits();
   
-  // If external year/month are provided, use them; otherwise use current date
-  const [currentMonth, setCurrentMonth] = useState(() => {
-    if (year && month && Number.isFinite(year) && Number.isFinite(month) && month >= 1 && month <= 12) {
-      return new Date(year, month - 1); // month is 0-indexed in JS Date
-    }
-    return new Date();
-  });
+  // Find the category color for habit
+  const category = categories.find(cat => cat.id === habit.category);
+  const categoryColorStr = category 
+    ? colors.categories[category.color as keyof typeof colors.categories] as string
+    : colors.primary as string;
   
-  // Update currentMonth when props change
+  // Set up the calendar month, defaulting to current month if not provided
+  const [currentMonth, setCurrentMonth] = useState(
+    new Date(year || new Date().getFullYear(), (month || new Date().getMonth()) - 1, 1)
+  );
+  
+  // Update when external month/year changes
   useEffect(() => {
-    if (year && month && Number.isFinite(year) && Number.isFinite(month) && month >= 1 && month <= 12) {
-      setCurrentMonth(new Date(year, month - 1));
+    if (year && month) {
+      setCurrentMonth(new Date(year, month - 1, 1));
     }
   }, [year, month]);
   
-  // Get category color
-  const category = categories.find(cat => cat.id === habit.category);
-  const categoryColor = category 
-    ? colors.categories[category.color as keyof typeof colors.categories] 
-    : colors.primary;
-  
-  // Day names for the header
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  
-  // Generate calendar grid manually
+  // Calculate days to display in calendar
   const renderCalendarDays = () => {
-    const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-    const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+    const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
     
-    // Find the first day to display (might be from previous month)
-    // Find the Sunday before or on the first day of the month
-    const startDay = new Date(monthStart);
-    while (startDay.getDay() !== 0) {
-      startDay.setDate(startDay.getDate() - 1);
+    // Month starts on day X, we need to add padding days
+    const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+    const startDay = firstDayOfMonth.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    
+    // Calculate how many days in month to display
+    const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
+    
+    // Create day grid
+    let days = [];
+    let week = [];
+    
+    // Create day name header
+    const dayNamesRow = (
+      <View style={styles.dayNamesContainer}>
+        {dayNames.map((name, index) => (
+          <Text 
+            key={`day-name-${index}`} 
+            style={[styles.dayName, { color: colors.textSecondary }]}
+          >
+            {name}
+          </Text>
+        ))}
+      </View>
+    );
+    
+    // Add empty cells for start padding
+    for (let i = 0; i < startDay; i++) {
+      week.push(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), -startDay + i + 1));
     }
     
-    // Array to hold our weeks
-    const weeks = [];
-    
-    // Current day we're tracking
-    let currentDay = new Date(startDay);
-    
-    // Generate enough weeks to include the entire month plus padding
-    // This ensures we have complete weeks
-    while (currentDay <= monthEnd || currentDay.getDay() !== 0) {
-      // Create a week
-      const week = [];
+    // Add month days
+    for (let day = 1; day <= daysInMonth; day++) {
+      week.push(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day));
       
-      // Add 7 days to the week (Sun-Sat)
-      for (let i = 0; i < 7; i++) {
-        const day = new Date(currentDay);
-        week.push(day);
-        currentDay.setDate(currentDay.getDate() + 1);
+      if (week.length === 7) {
+        days.push(week);
+        week = [];
       }
-      
-      weeks.push(week);
+    }
+    
+    // Add empty cells for end padding to complete the last week
+    if (week.length > 0) {
+      const nextMonthDays = 7 - week.length;
+      for (let i = 1; i <= nextMonthDays; i++) {
+        week.push(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, i));
+      }
+      days.push(week);
     }
     
     return (
       <>
-        {weeks.map((week, weekIndex) => (
+        {days.map((week, weekIndex) => (
           <View key={`week-${weekIndex}`} style={styles.calendarRow}>
             {week.map(day => {
               const dateString = format(day, 'yyyy-MM-dd');
@@ -98,25 +110,26 @@ export const CalendarView = ({
                   style={styles.dayCell}
                   onPress={() => onSelectDate(dateString)}
                 >
-                  <View
-                    style={[
-                      styles.dayContent,
-                      isCurrentDay && { borderColor: colors.primary, borderWidth: 1 },
-                      isCompleted && { backgroundColor: `${categoryColor}20` },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.dayText,
-                        { color: isCurrentMonth ? colors.text : colors.textSecondary },
-                        isCurrentDay && { fontWeight: 'bold' },
-                      ]}
-                    >
+                  <View style={{
+                    flex: 1,
+                    justifyContent: 'center' as 'center',
+                    alignItems: 'center' as 'center',
+                    borderRadius: metrics.borderRadius.small,
+                    backgroundColor: isCompleted ? categoryColorStr : undefined,
+                    borderWidth: isCurrentDay || isCompleted ? 1 : 0,
+                    borderColor: isCompleted 
+                      ? categoryColorStr 
+                      : (isCurrentDay ? colors.calendarHighlight as string : undefined)
+                  }}>
+                    <Text style={{
+                      fontSize: metrics.fontSize.s,
+                      fontWeight: isCurrentDay ? 'bold' : 'normal',
+                      color: isCompleted 
+                        ? '#FFFFFF' 
+                        : (isCurrentMonth ? colors.text : colors.textSecondary)
+                    }}>
                       {day.getDate()}
                     </Text>
-                    {isCompleted && (
-                      <View style={[styles.completedDot, { backgroundColor: categoryColor }]} />
-                    )}
                   </View>
                 </TouchableOpacity>
               );
@@ -128,17 +141,10 @@ export const CalendarView = ({
   };
   
   return (
-    <View style={styles.container}>
-      {/* Day Names */}
-      <View style={styles.dayNamesContainer}>
-        {dayNames.map(day => (
-          <Text key={day} style={[styles.dayName, { color: colors.textSecondary }]}>
-            {day}
-          </Text>
-        ))}
-      </View>
-      
-      {/* Calendar Grid */}
+    <View style={{ 
+      padding: metrics.spacing.m,
+      backgroundColor: colors.surface
+    }}>
       <View style={styles.calendarGrid}>
         {renderCalendarDays()}
       </View>
@@ -147,9 +153,6 @@ export const CalendarView = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    padding: metrics.spacing.m,
-  },
   dayNamesContainer: {
     flexDirection: 'row',
     marginBottom: metrics.spacing.s,
@@ -171,20 +174,5 @@ const styles = StyleSheet.create({
     width: `${100 / 7}%`,
     aspectRatio: 1,
     padding: 2,
-  },
-  dayContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: metrics.borderRadius.small,
-  },
-  dayText: {
-    fontSize: metrics.fontSize.s,
-  },
-  completedDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginTop: 2,
   },
 }); 

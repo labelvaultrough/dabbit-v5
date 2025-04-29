@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 
 import { ThemeProvider } from '@/context/ThemeContext';
 import { HabitProvider } from '@/context/HabitContext';
@@ -21,12 +22,13 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
+// Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [loaded] = useFonts({
     'SpaceMono': require('../assets/fonts/SpaceMono-Regular.ttf'),
+    ...Feather.font,
   });
 
   useEffect(() => {

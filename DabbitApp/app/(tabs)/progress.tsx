@@ -22,6 +22,7 @@ import { Habit } from '@/types/habit';
 import { WeeklyProgressSummary } from '@/components/WeeklyProgressSummary';
 import { CategoryProgressSummary } from '@/components/CategoryProgressSummary';
 import { HabitCalendarSummary } from '@/components/HabitCalendarSummary';
+import { CyclingCard } from '@/components/CyclingCard';
 
 export default function ProgressScreen() {
   const { colors } = useTheme();
@@ -88,6 +89,9 @@ export default function ProgressScreen() {
       const dateString = format(day, 'yyyy-MM-dd');
       
       activeHabits.forEach(habit => {
+        // Skip one-time habits for analytics
+        if (habit.frequency.type === 'one-time') return;
+        
         // Check if the habit should be completed on this day based on frequency
         let shouldTrack = false;
         
@@ -120,7 +124,8 @@ export default function ProgressScreen() {
     
     // Initialize with all categories that have habits
     categories.forEach(category => {
-      const habitsInCategory = activeHabits.filter(h => h.category === category.id);
+      // Exclude one-time habits from analytics
+      const habitsInCategory = activeHabits.filter(h => h.category === category.id && h.frequency.type !== 'one-time');
       
       if (habitsInCategory.length > 0) {
         categoryStats.set(category.id, {
@@ -141,6 +146,9 @@ export default function ProgressScreen() {
       const dateString = format(date, 'yyyy-MM-dd');
       
       activeHabits.forEach(habit => {
+        // Skip one-time habits for analytics
+        if (habit.frequency.type === 'one-time') return;
+        
         const categoryId = habit.category;
         const categoryData = categoryStats.get(categoryId);
         
@@ -308,6 +316,11 @@ export default function ProgressScreen() {
           <WeeklyProgressSummary 
             completedCount={weeklyCompletions.completed}
             totalCount={weeklyCompletions.total}
+          />
+          
+          {/* Add Cycling Card */}
+          <CyclingCard 
+            onStartCycling={() => Alert.alert('Ready for cycling!', 'Your cycling session is about to begin.')}
           />
           
           {/* Category Progress Summary */}

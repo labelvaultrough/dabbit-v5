@@ -1,7 +1,7 @@
 // Types for habit tracking app
 
 // Habit Frequency options
-export type FrequencyType = 'daily' | 'weekly' | 'custom';
+export type FrequencyType = 'daily' | 'weekly' | 'custom' | 'one-time';
 
 export interface Frequency {
   type: FrequencyType;
@@ -23,6 +23,8 @@ export interface Habit {
   category: string; // Category ID - now required
   time?: string; // Time for the habit (HH:MM format)
   reminderEnabled?: boolean; // Whether this specific habit should show reminders
+  icon?: string; // Icon for the habit (Feather icon name)
+  duration?: number; // Duration in minutes
   archived: boolean;
   createdAt: string;
   updatedAt: string;

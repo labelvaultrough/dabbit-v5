@@ -18,6 +18,8 @@ import { Feather } from '@expo/vector-icons';
 import { Habit, FrequencyType, Frequency } from '@/types/habit';
 import { Dropdown } from './Dropdown';
 import { TimePickerField } from './TimePickerField';
+import { IconSelector } from './IconSelector';
+import { DurationSelector } from './DurationSelector';
 
 type HabitFormProps = {
   habit?: Habit | null;
@@ -36,6 +38,10 @@ export const HabitForm = ({ habit, onClose, onSave }: HabitFormProps) => {
   const [selectedTime, setSelectedTime] = useState<Date | null>(null);
   const [reminderEnabled, setReminderEnabled] = useState<boolean>(true); // Default to enabled
   const [showReminderInfo, setShowReminderInfo] = useState<boolean>(false);
+  
+  // New state for icon and duration
+  const [selectedIcon, setSelectedIcon] = useState<string | undefined>(undefined);
+  const [selectedDuration, setSelectedDuration] = useState<number | undefined>(undefined);
   
   // Validation state
   const [validationErrors, setValidationErrors] = useState<{
@@ -64,6 +70,15 @@ export const HabitForm = ({ habit, onClose, onSave }: HabitFormProps) => {
       
       // Set reminder enabled status (default to true if not specified)
       setReminderEnabled(habit.reminderEnabled !== false);
+      
+      // Set icon and duration if they exist
+      if (habit.icon) {
+        setSelectedIcon(habit.icon);
+      }
+      
+      if (habit.duration) {
+        setSelectedDuration(habit.duration);
+      }
     }
   }, [habit]);
 
@@ -153,6 +168,8 @@ export const HabitForm = ({ habit, onClose, onSave }: HabitFormProps) => {
         category: selectedCategory,
         time: formattedTime,
         reminderEnabled, // Include the reminder setting
+        icon: selectedIcon, // Add icon
+        duration: selectedDuration, // Add duration
       });
     } else {
       // Adding new habit
@@ -162,6 +179,8 @@ export const HabitForm = ({ habit, onClose, onSave }: HabitFormProps) => {
         category: selectedCategory,
         time: formattedTime,
         reminderEnabled, // Include the reminder setting
+        icon: selectedIcon, // Add icon
+        duration: selectedDuration, // Add duration
         archived: false,
       });
     }
@@ -231,11 +250,34 @@ export const HabitForm = ({ habit, onClose, onSave }: HabitFormProps) => {
           )}
         </View>
 
+        {/* Icon and Duration Selectors (side by side) */}
+        <View style={styles.formGroup}>
+          <View style={styles.timeReminderContainer}>
+            {/* Icon Selector - Left Side */}
+            <View style={styles.timeContainer}>
+              <IconSelector 
+                label="Icon"
+                value={selectedIcon}
+                onChange={setSelectedIcon}
+              />
+            </View>
+
+            {/* Duration Selector - Right Side */}
+            <View style={styles.reminderContainer}>
+              <DurationSelector 
+                label="Duration" 
+                value={selectedDuration} 
+                onChange={setSelectedDuration}
+              />
+            </View>
+          </View>
+        </View>
+
         {/* Frequency Selection */}
         <View style={styles.formGroup}>
           <Text style={[styles.label, { color: colors.text }]}>Frequency</Text>
           <View style={styles.frequencyOptions}>
-            {(['daily', 'weekly', 'custom'] as FrequencyType[]).map(type => (
+            {(['daily', 'weekly', 'custom', 'one-time'] as FrequencyType[]).map(type => (
               <TouchableOpacity
                 key={type}
                 style={[
@@ -254,7 +296,7 @@ export const HabitForm = ({ habit, onClose, onSave }: HabitFormProps) => {
                     { color: frequencyType === type ? colors.primary : colors.text },
                   ]}
                 >
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                  {type === 'one-time' ? 'One-time' : type.charAt(0).toUpperCase() + type.slice(1)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -419,18 +461,19 @@ const styles = StyleSheet.create({
   },
   frequencyOptions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
   frequencyOption: {
-    flex: 1,
-    padding: metrics.spacing.m,
+    width: '24%',
+    padding: metrics.spacing.s,
     borderRadius: metrics.borderRadius.medium,
     alignItems: 'center',
-    marginHorizontal: metrics.spacing.xs,
+    marginBottom: metrics.spacing.s,
     borderWidth: 1,
   },
   frequencyText: {
-    fontSize: metrics.fontSize.s,
+    fontSize: metrics.fontSize.xs,
     fontWeight: '500',
   },
   daysContainer: {

@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BucketDropdown } from './BucketDropdown';
 import { BucketType } from './BucketSelector';
+import { LinearGradient } from 'expo-linear-gradient';
 
 type HeaderProps = {
   title: string;
@@ -58,16 +59,22 @@ export const Header = ({
         {showAddButton && (
           <TouchableOpacity
             style={[
-              styles.addButton, 
+              styles.addButtonContainer, 
               { 
-                backgroundColor: colors.primary,
                 marginLeft: showBucketSelector ? metrics.spacing.m : 0
               }
             ]}
             onPress={onAddPress}
             activeOpacity={0.8}
           >
-            <Feather name="plus" size={metrics.iconSize.medium} color="#FFFFFF" />
+            <LinearGradient
+              colors={colors.primaryGradient as [string, string, ...string[]]}
+              style={styles.addButton}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Feather name="plus" size={metrics.iconSize.medium} color="#FFFFFF" />
+            </LinearGradient>
           </TouchableOpacity>
         )}
       </View>
@@ -100,12 +107,11 @@ const styles = StyleSheet.create({
   date: {
     fontSize: metrics.fontSize.m,
   },
-  addButton: {
+  addButtonContainer: {
     width: 42,
     height: 42,
     borderRadius: metrics.borderRadius.round,
-    justifyContent: 'center',
-    alignItems: 'center',
+    overflow: 'hidden',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -117,5 +123,11 @@ const styles = StyleSheet.create({
         elevation: 3,
       },
     }),
+  },
+  addButton: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 }); 

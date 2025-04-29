@@ -61,6 +61,8 @@ const SAMPLE_HABITS: Habit[] = [
     category: SAMPLE_CATEGORIES[0].id, // Health
     time: '08:00', // Morning
     reminderEnabled: true,
+    icon: 'droplet',
+    duration: 5,
     archived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -72,6 +74,8 @@ const SAMPLE_HABITS: Habit[] = [
     category: SAMPLE_CATEGORIES[6].id, // Personal
     time: '21:00', // Night
     reminderEnabled: true,
+    icon: 'book',
+    duration: 30,
     archived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -83,6 +87,8 @@ const SAMPLE_HABITS: Habit[] = [
     category: SAMPLE_CATEGORIES[1].id, // Fitness
     time: '17:30', // Evening
     reminderEnabled: true,
+    icon: 'activity',
+    duration: 45,
     archived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -94,6 +100,8 @@ const SAMPLE_HABITS: Habit[] = [
     category: SAMPLE_CATEGORIES[8].id, // Mindfulness
     time: '07:15', // Morning
     reminderEnabled: true,
+    icon: 'moon',
+    duration: 15,
     archived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -105,10 +113,51 @@ const SAMPLE_HABITS: Habit[] = [
     category: SAMPLE_CATEGORIES[5].id, // Learning
     time: '13:00', // Afternoon
     reminderEnabled: true,
+    icon: 'globe',
+    duration: 20,
     archived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
+  {
+    id: generateId(),
+    name: 'Doctor Appointment',
+    frequency: { type: 'one-time' },
+    category: SAMPLE_CATEGORIES[0].id, // Health
+    time: '14:30', // Afternoon
+    reminderEnabled: true,
+    icon: 'user',
+    duration: 60,
+    archived: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: generateId(),
+    name: 'Coffee with Friend',
+    frequency: { type: 'one-time' },
+    category: SAMPLE_CATEGORIES[7].id, // Social
+    time: '10:00', // Morning
+    reminderEnabled: true,
+    icon: 'coffee',
+    duration: 90,
+    archived: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: generateId(),
+    name: 'Weekly Planning',
+    frequency: { type: 'weekly' },
+    category: SAMPLE_CATEGORIES[4].id, // Productivity
+    time: '09:00', // Morning
+    reminderEnabled: true,
+    icon: 'calendar',
+    duration: 30,
+    archived: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }
 ];
 
 // Some sample completions for the habits
@@ -171,6 +220,24 @@ const SAMPLE_ENTRIES: HabitEntry[] = [
     date: format(today, 'yyyy-MM-dd'),
     completed: false,
   },
+  {
+    id: generateId(),
+    habitId: SAMPLE_HABITS[5].id, // Doctor Appointment (one-time)
+    date: format(yesterday, 'yyyy-MM-dd'),
+    completed: true,
+  },
+  {
+    id: generateId(),
+    habitId: SAMPLE_HABITS[6].id, // Coffee with Friend (one-time)
+    date: format(today, 'yyyy-MM-dd'),
+    completed: false,
+  },
+  {
+    id: generateId(),
+    habitId: SAMPLE_HABITS[7].id, // Weekly Planning
+    date: format(today, 'yyyy-MM-dd'),
+    completed: true,
+  }
 ];
 
 // Create the context
@@ -208,26 +275,41 @@ export function HabitProvider({ children }: { children: React.ReactNode }) {
     checkFirstLaunch();
   }, []);
 
-  // Load data from AsyncStorage on mount
+  // Load data from AsyncStorage on first render
   useEffect(() => {
     const loadData = async () => {
       try {
+        // For development, we can force using sample data
+        const useSampleData = false;
+
         const habitsData = await AsyncStorage.getItem(HABITS_STORAGE_KEY);
         const entriesData = await AsyncStorage.getItem(HABIT_ENTRIES_STORAGE_KEY);
         const categoriesData = await AsyncStorage.getItem(CATEGORIES_STORAGE_KEY);
         const usernameData = await AsyncStorage.getItem(USERNAME_STORAGE_KEY);
         const settingsData = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
 
-        // For development: force using sample data
-        const useSampleData = true; // Set to true to always use sample data
-
-        // If there's data in storage, use it
         if (habitsData && !useSampleData) {
-          setHabits(JSON.parse(habitsData));
+          // Clean any timer-related properties from existing habits
+          const parsedHabits = JSON.parse(habitsData);
+          const cleanedHabits = parsedHabits.map((h: any) => ({
+            ...h,
+            timerActive: undefined,
+            timerStartTime: undefined,
+            timerElapsed: undefined
+          }));
+          setHabits(cleanedHabits);
+          // Save the cleaned habits back to storage
+          await AsyncStorage.setItem(HABITS_STORAGE_KEY, JSON.stringify(cleanedHabits));
         } else if (isFirstLaunch || useSampleData) {
-          // If this is the first launch and no habits data, use sample data
-          setHabits(SAMPLE_HABITS);
-          await AsyncStorage.setItem(HABITS_STORAGE_KEY, JSON.stringify(SAMPLE_HABITS));
+          // For first launch, use sample data but ensure no timer properties
+          const cleanedSampleHabits = SAMPLE_HABITS.map(h => ({
+            ...h,
+            timerActive: undefined,
+            timerStartTime: undefined,
+            timerElapsed: undefined
+          }));
+          setHabits(cleanedSampleHabits);
+          await AsyncStorage.setItem(HABITS_STORAGE_KEY, JSON.stringify(cleanedSampleHabits));
         }
 
         if (entriesData && !useSampleData) {
@@ -340,7 +422,14 @@ export function HabitProvider({ children }: { children: React.ReactNode }) {
     setHabits(prevHabits =>
       prevHabits.map(habit =>
         habit.id === updatedHabit.id
-          ? { ...updatedHabit, updatedAt: new Date().toISOString() }
+          ? { 
+              ...updatedHabit, 
+              updatedAt: new Date().toISOString(),
+              // Remove any existing timer properties
+              timerActive: undefined,
+              timerStartTime: undefined,
+              timerElapsed: undefined
+            }
           : habit
       )
     );
@@ -419,7 +508,8 @@ export function HabitProvider({ children }: { children: React.ReactNode }) {
   // Calculate daily progress percentage
   const getDailyProgress = () => {
     const todayString = format(new Date(), 'yyyy-MM-dd');
-    const activeHabits = habits.filter(habit => !habit.archived);
+    // Filter out archived habits and one-time habits for analytics
+    const activeHabits = habits.filter(habit => !habit.archived && habit.frequency.type !== 'one-time');
     
     if (activeHabits.length === 0) return 0;
     
@@ -481,6 +571,10 @@ export function HabitProvider({ children }: { children: React.ReactNode }) {
 
   // Helper to get completion rate for last 30 days
   const getCompletionRate = (habitId: string) => {
+    // Skip one-time habits for analytics
+    const habit = habits.find(h => h.id === habitId);
+    if (habit?.frequency.type === 'one-time') return 0;
+    
     // This is a simplified implementation - in a real app you'd calculate the last 30 days
     // based on the habit creation date and frequency
     let completed = 0;
