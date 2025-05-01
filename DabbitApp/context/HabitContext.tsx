@@ -1,7 +1,18 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format, isToday, parseISO, subDays } from 'date-fns';
 import { Habit, HabitEntry, Category, GlobalSettings } from '@/types/habit';
+import { AppState } from 'react-native';
+
+// Add timer state type
+export interface TimerState {
+  habitId: string;
+  startTimestamp: number;
+  pausedAt: number | null;
+  totalPausedTime: number;
+  isActive: boolean;
+  progress: number;
+}
 
 // Define types for our context
 type HabitContextType = {
@@ -22,6 +33,15 @@ type HabitContextType = {
   deleteCategory: (id: string) => Promise<void>;
   getDailyProgress: () => number;
   getCompletionRate: (habitId: string) => number;
+  
+  // Add timer-related functions
+  startHabitTimer: (habitId: string) => void;
+  pauseHabitTimer: (habitId: string) => void;
+  resumeHabitTimer: (habitId: string) => void;
+  stopHabitTimer: (habitId: string, markCompleted?: boolean) => void;
+  getHabitTimerState: (habitId: string) => TimerState | null;
+  saveTimerProgress: (habitId: string, progress: number) => Promise<void>;
+  getHabitHistory: (habitId: string) => Array<{date: string, progress: number, completed: boolean}>;
 };
 
 // Storage keys
@@ -30,6 +50,8 @@ const HABIT_ENTRIES_STORAGE_KEY = '@dabbit_habit_entries';
 const CATEGORIES_STORAGE_KEY = '@dabbit_categories';
 const USERNAME_STORAGE_KEY = '@dabbit_username';
 const SETTINGS_STORAGE_KEY = '@dabbit_settings';
+const TIMER_STORAGE_KEY = '@dabbit_timers';
+const HISTORY_STORAGE_KEY = '@dabbit_history';
 
 // Helper function to generate a simple ID without using UUID
 const generateId = () => {
@@ -53,26 +75,35 @@ const SAMPLE_CATEGORIES: Category[] = [
   { id: generateId(), name: 'Sleep', color: 'violet' },
 ];
 
+// Create fixed IDs for sample habits to ensure consistent streak tracking
+const DRINK_WATER_ID = 'drink-water-habit';
+const READ_ID = 'read-habit';
+const EXERCISE_ID = 'exercise-habit';
+const MEDITATE_ID = 'meditate-habit';
+const COFFEE_ID = 'coffee-habit';
+const DOCTOR_ID = 'doctor-habit';
+const LANGUAGE_ID = 'language-habit';
+
 const SAMPLE_HABITS: Habit[] = [
   {
-    id: generateId(),
+    id: DRINK_WATER_ID,
     name: 'Drink Water',
     frequency: { type: 'daily' },
-    category: SAMPLE_CATEGORIES[0].id, // Health
-    time: '08:00', // Morning
+    category: SAMPLE_CATEGORIES[2].id, // Nutrition
+    time: '08:00', // 8:00 AM
     reminderEnabled: true,
     icon: 'droplet',
-    duration: 5,
+    duration: undefined,
     archived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
   {
-    id: generateId(),
+    id: READ_ID,
     name: 'Read',
     frequency: { type: 'daily' },
     category: SAMPLE_CATEGORIES[6].id, // Personal
-    time: '21:00', // Night
+    time: '21:00', // 9:00 PM
     reminderEnabled: true,
     icon: 'book',
     duration: 30,
@@ -81,11 +112,11 @@ const SAMPLE_HABITS: Habit[] = [
     updatedAt: new Date().toISOString(),
   },
   {
-    id: generateId(),
+    id: EXERCISE_ID,
     name: 'Exercise',
     frequency: { type: 'custom', custom_days: [1, 3, 5] }, // Mon, Wed, Fri
     category: SAMPLE_CATEGORIES[1].id, // Fitness
-    time: '17:30', // Evening
+    time: '17:30', // 5:30 PM
     reminderEnabled: true,
     icon: 'activity',
     duration: 45,
@@ -94,11 +125,11 @@ const SAMPLE_HABITS: Habit[] = [
     updatedAt: new Date().toISOString(),
   },
   {
-    id: generateId(),
+    id: MEDITATE_ID,
     name: 'Meditate',
     frequency: { type: 'daily' },
     category: SAMPLE_CATEGORIES[8].id, // Mindfulness
-    time: '07:15', // Morning
+    time: '07:15', // 7:15 AM
     reminderEnabled: true,
     icon: 'moon',
     duration: 15,
@@ -107,37 +138,11 @@ const SAMPLE_HABITS: Habit[] = [
     updatedAt: new Date().toISOString(),
   },
   {
-    id: generateId(),
-    name: 'Learn a Language',
-    frequency: { type: 'daily' },
-    category: SAMPLE_CATEGORIES[5].id, // Learning
-    time: '13:00', // Afternoon
-    reminderEnabled: true,
-    icon: 'globe',
-    duration: 20,
-    archived: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: generateId(),
-    name: 'Doctor Appointment',
-    frequency: { type: 'one-time' },
-    category: SAMPLE_CATEGORIES[0].id, // Health
-    time: '14:30', // Afternoon
-    reminderEnabled: true,
-    icon: 'user',
-    duration: 60,
-    archived: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: generateId(),
+    id: COFFEE_ID,
     name: 'Coffee with Friend',
-    frequency: { type: 'one-time' },
+    frequency: { type: 'weekly' },
     category: SAMPLE_CATEGORIES[7].id, // Social
-    time: '10:00', // Morning
+    time: '10:00', // 10:00 AM
     reminderEnabled: true,
     icon: 'coffee',
     duration: 90,
@@ -146,14 +151,27 @@ const SAMPLE_HABITS: Habit[] = [
     updatedAt: new Date().toISOString(),
   },
   {
-    id: generateId(),
-    name: 'Weekly Planning',
-    frequency: { type: 'weekly' },
-    category: SAMPLE_CATEGORIES[4].id, // Productivity
-    time: '09:00', // Morning
+    id: DOCTOR_ID,
+    name: 'Doctor Appointment',
+    frequency: { type: 'custom', custom_days: [2] }, // Tuesday
+    category: SAMPLE_CATEGORIES[0].id, // Health
+    time: '14:30', // 2:30 PM
     reminderEnabled: true,
-    icon: 'calendar',
-    duration: 30,
+    icon: 'user',
+    duration: 60,
+    archived: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: LANGUAGE_ID,
+    name: 'Learn a Language',
+    frequency: { type: 'daily' },
+    category: SAMPLE_CATEGORIES[5].id, // Learning
+    time: '13:00', // 1:00 PM
+    reminderEnabled: true,
+    icon: 'globe',
+    duration: 20,
     archived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -163,79 +181,112 @@ const SAMPLE_HABITS: Habit[] = [
 // Some sample completions for the habits
 const today = new Date();
 const yesterday = subDays(today, 1);
-const dayBefore = subDays(today, 2);
+const twoDaysAgo = subDays(today, 2);
+const threeDaysAgo = subDays(today, 3);
+const fourDaysAgo = subDays(today, 4);
 
 const SAMPLE_ENTRIES: HabitEntry[] = [
+  // Drink Water - streak of 3
   {
     id: generateId(),
-    habitId: SAMPLE_HABITS[0].id, // Drink Water
+    habitId: DRINK_WATER_ID,
     date: format(today, 'yyyy-MM-dd'),
     completed: true,
   },
   {
     id: generateId(),
-    habitId: SAMPLE_HABITS[0].id, // Drink Water
+    habitId: DRINK_WATER_ID,
     date: format(yesterday, 'yyyy-MM-dd'),
     completed: true,
   },
   {
     id: generateId(),
-    habitId: SAMPLE_HABITS[0].id, // Drink Water
-    date: format(dayBefore, 'yyyy-MM-dd'),
+    habitId: DRINK_WATER_ID,
+    date: format(twoDaysAgo, 'yyyy-MM-dd'),
     completed: true,
   },
+  
+  // Read - not completed, showing timer progress
   {
     id: generateId(),
-    habitId: SAMPLE_HABITS[1].id, // Read
+    habitId: READ_ID,
     date: format(today, 'yyyy-MM-dd'),
     completed: false,
   },
+  
+  // Exercise - streak of 1
   {
     id: generateId(),
-    habitId: SAMPLE_HABITS[1].id, // Read
-    date: format(yesterday, 'yyyy-MM-dd'),
+    habitId: EXERCISE_ID,
+    date: format(today, 'yyyy-MM-dd'),
     completed: true,
   },
+  
+  // Meditate - streak of 2
   {
     id: generateId(),
-    habitId: SAMPLE_HABITS[2].id, // Exercise
+    habitId: MEDITATE_ID,
     date: format(today, 'yyyy-MM-dd'),
     completed: true,
   },
   {
     id: generateId(),
-    habitId: SAMPLE_HABITS[3].id, // Meditate
+    habitId: MEDITATE_ID,
+    date: format(yesterday, 'yyyy-MM-dd'),
+    completed: true,
+  },
+  
+  // Coffee - streak of 3 (weekly habit)
+  {
+    id: generateId(),
+    habitId: COFFEE_ID,
     date: format(today, 'yyyy-MM-dd'),
     completed: true,
   },
   {
     id: generateId(),
-    habitId: SAMPLE_HABITS[3].id, // Meditate
-    date: format(yesterday, 'yyyy-MM-dd'),
+    habitId: COFFEE_ID,
+    date: format(subDays(today, 7), 'yyyy-MM-dd'),
     completed: true,
   },
   {
     id: generateId(),
-    habitId: SAMPLE_HABITS[4].id, // Learn a Language
+    habitId: COFFEE_ID,
+    date: format(subDays(today, 14), 'yyyy-MM-dd'),
+    completed: true,
+  },
+  
+  // Doctor - in progress with timer (not completed)
+  {
+    id: generateId(),
+    habitId: DOCTOR_ID,
     date: format(today, 'yyyy-MM-dd'),
     completed: false,
   },
+  
+  // Language - streak of 4
   {
     id: generateId(),
-    habitId: SAMPLE_HABITS[5].id, // Doctor Appointment (one-time)
+    habitId: LANGUAGE_ID,
+    date: format(today, 'yyyy-MM-dd'),
+    completed: true,
+  },
+  {
+    id: generateId(),
+    habitId: LANGUAGE_ID,
     date: format(yesterday, 'yyyy-MM-dd'),
     completed: true,
   },
   {
     id: generateId(),
-    habitId: SAMPLE_HABITS[6].id, // Coffee with Friend (one-time)
-    date: format(today, 'yyyy-MM-dd'),
-    completed: false,
+    habitId: LANGUAGE_ID,
+    date: format(twoDaysAgo, 'yyyy-MM-dd'),
+    completed: true,
   },
   {
     id: generateId(),
-    habitId: SAMPLE_HABITS[7].id, // Weekly Planning
-    date: format(today, 'yyyy-MM-dd'),
+    habitId: LANGUAGE_ID,
+    date: format(threeDaysAgo, 'yyyy-MM-dd'),
     completed: true,
   }
 ];
@@ -253,6 +304,30 @@ export function HabitProvider({ children }: { children: React.ReactNode }) {
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings>({
     remindersEnabled: true, // default to enabled
   });
+  
+  // Add timer-related state
+  const [activeTimers, setActiveTimers] = useState<TimerState[]>([
+    // Timer state for Read habit (1 out of 30 minutes)
+    {
+      habitId: READ_ID,
+      startTimestamp: Date.now() - (6 * 60 * 1000), // Started 6 minutes ago
+      pausedAt: null, // Currently active
+      totalPausedTime: 0,
+      isActive: true, // Active
+      progress: 20, // 6/30 minutes = 20%
+    },
+    // Timer state for Doctor Appointment (41 out of 60 minutes)
+    {
+      habitId: DOCTOR_ID,
+      startTimestamp: Date.now() - (41 * 60 * 1000), // Started 41 minutes ago
+      pausedAt: Date.now(), // Currently paused
+      totalPausedTime: 0,
+      isActive: false, // Paused
+      progress: 68, // 41/60 minutes = 68%
+    }
+  ]);
+  const [habitHistory, setHabitHistory] = useState<Record<string, Array<{date: string, progress: number, completed: boolean}>>>({});
+  const appState = useRef(AppState.currentState);
 
   // Check if this is the first launch
   useEffect(() => {
@@ -287,6 +362,7 @@ export function HabitProvider({ children }: { children: React.ReactNode }) {
         const categoriesData = await AsyncStorage.getItem(CATEGORIES_STORAGE_KEY);
         const usernameData = await AsyncStorage.getItem(USERNAME_STORAGE_KEY);
         const settingsData = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
+        const timerData = await AsyncStorage.getItem(TIMER_STORAGE_KEY);
 
         if (habitsData && !useSampleData) {
           // Clean any timer-related properties from existing habits
@@ -310,6 +386,29 @@ export function HabitProvider({ children }: { children: React.ReactNode }) {
           }));
           setHabits(cleanedSampleHabits);
           await AsyncStorage.setItem(HABITS_STORAGE_KEY, JSON.stringify(cleanedSampleHabits));
+          
+          // Set initial timer state for Read habit if this is first launch
+          if (!timerData || isFirstLaunch || useSampleData) {
+            const initialTimerState = [
+              {
+                habitId: READ_ID,
+                startTimestamp: Date.now() - (6 * 60 * 1000),
+                pausedAt: null,
+                totalPausedTime: 0,
+                isActive: true,
+                progress: 20,
+              },
+              {
+                habitId: DOCTOR_ID,
+                startTimestamp: Date.now() - (41 * 60 * 1000),
+                pausedAt: Date.now(),
+                totalPausedTime: 0,
+                isActive: false,
+                progress: 68,
+              }
+            ];
+            await AsyncStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(initialTimerState));
+          }
         }
 
         if (entriesData && !useSampleData) {
@@ -348,6 +447,27 @@ export function HabitProvider({ children }: { children: React.ReactNode }) {
 
     loadData();
   }, [isFirstLaunch]);
+
+  // Load timer state and history from AsyncStorage
+  useEffect(() => {
+    const loadTimerData = async () => {
+      try {
+        const timerData = await AsyncStorage.getItem(TIMER_STORAGE_KEY);
+        if (timerData) {
+          setActiveTimers(JSON.parse(timerData));
+        }
+        
+        const historyData = await AsyncStorage.getItem(HISTORY_STORAGE_KEY);
+        if (historyData) {
+          setHabitHistory(JSON.parse(historyData));
+        }
+      } catch (error) {
+        console.error('Error loading timer data:', error);
+      }
+    };
+    
+    loadTimerData();
+  }, []);
 
   // Save habits to AsyncStorage whenever they change
   useEffect(() => {
@@ -393,6 +513,109 @@ export function HabitProvider({ children }: { children: React.ReactNode }) {
       saveCategories();
     }
   }, [categories]);
+
+  // Save timer state to AsyncStorage when it changes
+  useEffect(() => {
+    const saveTimerState = async () => {
+      try {
+        await AsyncStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(activeTimers));
+      } catch (error) {
+        console.error('Error saving timer state:', error);
+      }
+    };
+    
+    saveTimerState();
+  }, [activeTimers]);
+  
+  // Save history data to AsyncStorage when it changes
+  useEffect(() => {
+    const saveHistoryData = async () => {
+      try {
+        await AsyncStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(habitHistory));
+      } catch (error) {
+        console.error('Error saving habit history:', error);
+      }
+    };
+    
+    saveHistoryData();
+  }, [habitHistory]);
+  
+  // Track app state for background/foreground transitions
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (appState.current === 'active' && nextAppState.match(/inactive|background/)) {
+        // App going to background - save timestamp for each active timer
+        setActiveTimers(prev => prev.map(timer => ({
+          ...timer,
+          pausedAt: timer.isActive ? Date.now() : timer.pausedAt
+        })));
+      } else if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        // App coming to foreground - adjust totalPausedTime for each timer
+        setActiveTimers(prev => prev.map(timer => {
+          if (timer.isActive && timer.pausedAt) {
+            return {
+              ...timer,
+              totalPausedTime: timer.totalPausedTime + (Date.now() - timer.pausedAt),
+              pausedAt: null
+            };
+          }
+          return timer;
+        }));
+      }
+      appState.current = nextAppState;
+    });
+    
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+  
+  // Timer update interval for progress
+  useEffect(() => {
+    const updateInterval = setInterval(() => {
+      const now = Date.now();
+      
+      setActiveTimers(prev => {
+        let updated = false;
+        const updatedTimers = prev.map(timer => {
+          if (!timer.isActive) return timer;
+          
+          const habit = habits.find(h => h.id === timer.habitId);
+          if (!habit?.duration) return timer;
+          
+          const totalDuration = habit.duration * 60 * 1000;
+          const adjustedElapsed = now - timer.startTimestamp - timer.totalPausedTime;
+          const newProgress = Math.min((adjustedElapsed / totalDuration) * 100, 100);
+          
+          if (newProgress !== timer.progress) {
+            updated = true;
+            
+            // Check if the timer is complete
+            if (newProgress >= 100) {
+              // Schedule completion for after the interval update
+              setTimeout(() => {
+                toggleHabitCompletion(timer.habitId, format(new Date(), 'yyyy-MM-dd'));
+                
+                // Update history
+                addToHistory(timer.habitId, 100, true);
+                
+                // Remove this timer from active timers
+                setActiveTimers(current => current.filter(t => t.habitId !== timer.habitId));
+              }, 0);
+            }
+            
+            return { ...timer, progress: newProgress };
+          }
+          
+          return timer;
+        });
+        
+        return updated ? updatedTimers : prev;
+      });
+    }, 1000);
+    
+    return () => clearInterval(updateInterval);
+  }, [habits]);
 
   // Set username
   const setUsername = async (name: string) => {
@@ -593,6 +816,106 @@ export function HabitProvider({ children }: { children: React.ReactNode }) {
     return Math.round((completed / 30) * 100);
   };
 
+  // Timer management functions
+  const startHabitTimer = (habitId: string) => {
+    const now = Date.now();
+    
+    // Remove any existing timer for this habit first
+    setActiveTimers(prev => {
+      const existing = prev.find(t => t.habitId === habitId);
+      if (existing) {
+        // Save partial progress to history
+        addToHistory(habitId, existing.progress, false);
+      }
+      
+      return [
+        ...prev.filter(t => t.habitId !== habitId),
+        {
+          habitId,
+          startTimestamp: now,
+          pausedAt: null,
+          totalPausedTime: 0,
+          isActive: true,
+          progress: 0
+        }
+      ];
+    });
+  };
+  
+  const pauseHabitTimer = (habitId: string) => {
+    setActiveTimers(prev => prev.map(timer => {
+      if (timer.habitId === habitId && timer.isActive) {
+        return {
+          ...timer,
+          pausedAt: Date.now(),
+          isActive: false
+        };
+      }
+      return timer;
+    }));
+  };
+  
+  const resumeHabitTimer = (habitId: string) => {
+    setActiveTimers(prev => prev.map(timer => {
+      if (timer.habitId === habitId && !timer.isActive && timer.pausedAt) {
+        return {
+          ...timer,
+          totalPausedTime: timer.totalPausedTime + (Date.now() - timer.pausedAt),
+          pausedAt: null,
+          isActive: true
+        };
+      }
+      return timer;
+    }));
+  };
+  
+  const stopHabitTimer = (habitId: string, markCompleted = false) => {
+    // Get current progress before removing
+    const timerState = activeTimers.find(t => t.habitId === habitId);
+    
+    if (timerState) {
+      // Save to history
+      addToHistory(habitId, timerState.progress, markCompleted);
+      
+      // If markCompleted is true, also toggle completion
+      if (markCompleted) {
+        setTimeout(() => {
+          toggleHabitCompletion(habitId, format(new Date(), 'yyyy-MM-dd'));
+        }, 0);
+      }
+    }
+    
+    // Remove the timer
+    setActiveTimers(prev => prev.filter(timer => timer.habitId !== habitId));
+  };
+  
+  const getHabitTimerState = (habitId: string): TimerState | null => {
+    return activeTimers.find(timer => timer.habitId === habitId) || null;
+  };
+  
+  const saveTimerProgress = async (habitId: string, progress: number) => {
+    addToHistory(habitId, progress, false);
+  };
+  
+  const addToHistory = (habitId: string, progress: number, completed: boolean) => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    
+    setHabitHistory(prev => {
+      const habitRecords = prev[habitId] || [];
+      return {
+        ...prev,
+        [habitId]: [
+          ...habitRecords,
+          { date: today, progress, completed }
+        ]
+      };
+    });
+  };
+  
+  const getHabitHistory = (habitId: string) => {
+    return habitHistory[habitId] || [];
+  };
+
   const value = {
     habits,
     categories,
@@ -611,6 +934,14 @@ export function HabitProvider({ children }: { children: React.ReactNode }) {
     deleteCategory,
     getDailyProgress,
     getCompletionRate,
+    // Add timer functions to context
+    startHabitTimer,
+    pauseHabitTimer,
+    resumeHabitTimer,
+    stopHabitTimer,
+    getHabitTimerState,
+    saveTimerProgress,
+    getHabitHistory
   };
 
   return <HabitContext.Provider value={value}>{children}</HabitContext.Provider>;

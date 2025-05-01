@@ -1,18 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Animated, Modal } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, Animated } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '@/context/ThemeContext';
-import { useHabits } from '@/context/HabitContext';
-import { metrics } from '@/constants/metrics';
 import { Habit } from '@/types/habit';
-
-type HabitItemProps = {
-  habit: Habit;
-  date: string;
-  onPress: (habitId: string) => void;
-  onEdit?: (habit: Habit) => void;
-  onDelete?: (habit: Habit) => void;
-};
+import { useHabits } from '@/context/HabitContext';
+import { format } from 'date-fns';
 
 // Get time bucket emoji based on the time
 export const getTimeBucketEmoji = (timeString: string | undefined) => {
@@ -42,268 +34,343 @@ export const getCurrentTimeBucket = () => {
   return getTimeBucketEmoji(timeString)?.label || null;
 };
 
+type HabitItemProps = {
+  habit: Habit;
+  date: string;
+  onPress: (habitId: string) => void;
+  onEdit?: (habit: Habit) => void;
+  onDelete?: (habit: Habit) => void;
+};
+
+// Format time to 12-hour format
+const formatTime = (timeString: string | undefined): string => {
+  if (!timeString) return '';
+  
+  const [hours, minutes] = timeString.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const displayHour = hours % 12 || 12;
+  return `${displayHour}:${minutes.toString().padStart(2, '0')} ${period}`;
+};
+
+/**
+ * HabitItem component that displays a habit card with name, time, duration, and completion status
+ */
 export const HabitItem = ({ habit, date, onPress, onEdit, onDelete }: HabitItemProps) => {
   const { colors } = useTheme();
-  const { getHabitCompletionStatus, getHabitStreak, categories } = useHabits();
-  const [menuVisible, setMenuVisible] = useState(false);
+  const { 
+    getHabitCompletionStatus, 
+    getHabitStreak, 
+    getHabitTimerState,
+    startHabitTimer,
+    pauseHabitTimer,
+    resumeHabitTimer,
+    stopHabitTimer
+  } = useHabits();
   
-  const completed = getHabitCompletionStatus(habit.id, date);
+  const [animatedValue] = useState(new Animated.Value(0));
+  
+  const isCompleted = getHabitCompletionStatus(habit.id, date);
   const streak = getHabitStreak(habit.id);
+  const timerState = getHabitTimerState?.(habit.id);
+  const isTimerActive = timerState?.isActive || false;
+  const progress = timerState?.progress || 0;
   
-  // For animation
-  const animatedValue = React.useRef(new Animated.Value(0)).current;
-  
-  // Find category color
-  const category = categories.find(cat => cat.id === habit.category);
-  const categoryColor = category 
-    ? colors.categories[category.color as keyof typeof colors.categories] 
-    : colors.primary;
-  
-  // Ensure we're using a string for colors
-  const categoryColorStr = typeof categoryColor === 'string' ? categoryColor : colors.primary;
-  
+  // Animation for completion
   useEffect(() => {
     Animated.timing(animatedValue, {
-      toValue: completed ? 1 : 0,
+      toValue: isCompleted ? 1 : 0,
       duration: 300,
       useNativeDriver: true,
     }).start();
-  }, [completed, animatedValue]);
+  }, [isCompleted]);
   
-  const scale = animatedValue.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [1, 1.2, 1],
-  });
+  // Function to get the background color based on habit name or category
+  const getBackgroundColor = () => {
+    if (habit.name.toLowerCase().includes('language')) {
+      return '#EBE6FF'; // Light purple for language learning
+    } else if (habit.name.toLowerCase().includes('doctor') || habit.name.toLowerCase().includes('appointment')) {
+      return '#E6FFF0'; // Light green for doctor/medical
+    } else if (habit.name.toLowerCase().includes('coffee') || habit.name.toLowerCase().includes('friend')) {
+      return '#FFE6EB'; // Light pink for social activities
+    } else if (habit.name.toLowerCase().includes('exercise') || habit.name.toLowerCase().includes('workout')) {
+      return '#FFF1E6'; // Light orange for exercise
+    } else if (habit.name.toLowerCase().includes('read') || habit.name.toLowerCase().includes('book')) {
+      return '#E6F0FF'; // Light blue for reading
+    } else if (habit.name.toLowerCase().includes('meditate')) {
+      return '#F0E6FF'; // Light purple for meditation
+    }
+    
+    // Default colors
+    return isCompleted ? '#F5F5F5' : '#E6F0FF';
+  };
   
-  const backgroundColor = completed ? `${categoryColorStr}20` : 'transparent';
-
-  const handleEdit = () => {
-    setMenuVisible(false);
-    if (onEdit) {
-      onEdit(habit);
+  // Handle action button press
+  const handleActionButtonPress = () => {
+    if (habit.duration) {
+      // For timed habits, manage timer
+      if (isCompleted) {
+        // Do nothing if already completed
+        return;
+      }
+      
+      if (isTimerActive) {
+        pauseHabitTimer(habit.id);
+      } else if (timerState && !isTimerActive) {
+        resumeHabitTimer(habit.id);
+      } else {
+        startHabitTimer(habit.id);
+      }
+    } else {
+      // For non-timed habits, toggle completion
+      onPress(habit.id);
     }
   };
-
-  const handleDelete = () => {
-    setMenuVisible(false);
-    if (onDelete) {
-      onDelete(habit);
+  
+  // Get icon based on habit name
+  const getHabitIcon = () => {
+    // Use the provided icon if available
+    if (habit.icon) {
+      return { name: habit.icon, color: '#4A5568' };
     }
+    
+    // Otherwise determine based on name
+    if (habit.name.toLowerCase().includes('language')) {
+      return { name: 'globe', color: '#5D5FEF' }; 
+    } else if (habit.name.toLowerCase().includes('doctor') || habit.name.toLowerCase().includes('appointment')) {
+      return { name: 'user', color: '#4CAF50' }; 
+    } else if (habit.name.toLowerCase().includes('coffee')) {
+      return { name: 'coffee', color: '#E91E63' };
+    } else if (habit.name.toLowerCase().includes('exercise') || habit.name.toLowerCase().includes('workout')) {
+      return { name: 'activity', color: '#FF6B6B' };
+    } else if (habit.name.toLowerCase().includes('read') || habit.name.toLowerCase().includes('book')) {
+      return { name: 'book', color: '#3B82F6' };
+    } else if (habit.name.toLowerCase().includes('meditate')) {
+      return { name: 'moon', color: '#8B5CF6' };
+    }
+    
+    return { name: 'check', color: '#3F51B5' };
   };
   
-  const timeBucket = getTimeBucketEmoji(habit.time);
+  // Function to determine the action button type
+  const renderActionButton = () => {
+    // For habits with duration, show timer controls
+    if (habit.duration) {
+      if (isCompleted) {
+        return (
+          <TouchableOpacity 
+            style={[styles.actionButton, { backgroundColor: '#4CAF50' }]}
+            onPress={handleActionButtonPress}
+          >
+            <Feather name="check" size={24} color="white" />
+          </TouchableOpacity>
+        );
+      }
+      
+      // Show progress and play/pause button
+      return (
+        <View style={styles.timerContainer}>
+          <TouchableOpacity 
+            style={[styles.actionButton, { backgroundColor: isTimerActive ? '#4CAF50' : '#2D3748' }]}
+            onPress={handleActionButtonPress}
+          >
+            <Feather name={isTimerActive ? "pause" : "play"} size={24} color="white" />
+          </TouchableOpacity>
+          
+          {/* Only show progress bar if timer has started */}
+          {timerState && (
+            <View style={styles.progressBar}>
+              <View 
+                style={[
+                  styles.progressFill, 
+                  { width: `${progress}%`, backgroundColor: '#4CAF50' }
+                ]} 
+              />
+            </View>
+          )}
+        </View>
+      );
+    }
+    
+    // For non-duration habits, show check circle
+    return (
+      <Animated.View style={{ transform: [{ scale: animatedValue.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [1, 1.2, 1],
+      }) }] }}>
+        <TouchableOpacity onPress={() => onPress(habit.id)}>
+          <Feather 
+            name={isCompleted ? "check-circle" : "circle"} 
+            size={32} 
+            color={isCompleted ? '#4CAF50' : colors.border} 
+          />
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  };
+  
+  // Get formatted duration text
+  const getDurationText = () => {
+    if (!habit.duration) return '';
+    
+    if (timerState) {
+      const totalMinutes = habit.duration;
+      const progressMinutes = Math.floor((progress / 100) * totalMinutes);
+      return `${progressMinutes}/${totalMinutes} min`;
+    }
+    
+    return `${habit.duration} min`;
+  };
+  
+  // Get icon for the habit
+  const iconInfo = getHabitIcon();
   
   return (
-    <View>
-      <TouchableOpacity
-        style={[
-          styles.container,
-          { 
-            backgroundColor: backgroundColor,
-            borderColor: colors.border,
-          }
-        ]}
-        onPress={() => {
-          // Always toggle completion, regardless of duration
-          onPress(habit.id);
-        }}
-        activeOpacity={0.8}
-      >
-        <View style={styles.contentContainer}>
-          <View style={styles.textContainer}>
-            <View style={styles.titleContainer}>
-              {/* Show custom icon if available, otherwise show time bucket emoji */}
-              {habit.icon ? (
-                <View style={[styles.iconWrapper, { backgroundColor: `${categoryColorStr}20` }]}>
-                  <Feather name={habit.icon as any} size={24} color={categoryColorStr} />
-                </View>
-              ) : timeBucket ? (
-                <Text style={styles.timeEmoji}>
-                  {timeBucket.emoji}
-                </Text>
-              ) : null}
-              
-              {category && (
-                <View 
-                  style={[
-                    styles.categoryDot, 
-                    { backgroundColor: categoryColorStr }
-                  ]}
-                />
-              )}
-              <Text style={[styles.title, { color: colors.text }]}>{habit.name}</Text>
+    <View style={[styles.container, { backgroundColor: getBackgroundColor() }]}>
+      <View style={styles.leftSection}>
+        <View style={[styles.iconContainer, { backgroundColor: 'white' }]}>
+          <Feather name={iconInfo.name as any} size={24} color={iconInfo.color} />
+        </View>
+        
+        <View style={styles.textContainer}>
+          <Text style={styles.title}>{habit.name}</Text>
+          <View style={styles.detailsContainer}>
+            <View style={styles.timeInfoContainer}>
+              <Feather name="clock" size={16} color="#718096" style={styles.timeIcon} />
+              <Text style={styles.timeText}>{formatTime(habit.time)}</Text>
             </View>
             
-            {/* Show duration indicator if habit has a duration */}
-            {habit.duration && (
-              <View style={styles.durationContainer}>
-                <Feather name="clock" size={14} color={colors.textSecondary} />
-                <Text style={[styles.durationText, { color: colors.textSecondary }]}>
-                  {habit.duration} min
-                </Text>
-              </View>
-            )}
-          </View>
-          
-          <View style={styles.rightContainer}>
-            {streak > 0 && (
-              <Text style={[styles.streak, { color: colors.textSecondary }]}>
-                🔥 x{streak}
-              </Text>
-            )}
-            {(onEdit || onDelete) && (
-              <TouchableOpacity 
-                style={styles.menuButton}
-                onPress={() => setMenuVisible(true)}
-                hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
-              >
-                <Feather 
-                  name="more-vertical" 
-                  size={metrics.iconSize.medium} 
-                  color={colors.textSecondary}
-                />
-              </TouchableOpacity>
-            )}
+            {/* Bullet separator */}
+            <Text style={styles.bullet}>•</Text>
             
-            <Animated.View style={{ transform: [{ scale }] }}>
-              <Feather 
-                name={completed ? "check-circle" : "circle"} 
-                size={metrics.iconSize.large} 
-                color={completed ? categoryColorStr : colors.border} 
-              />
-            </Animated.View>
+            {/* Duration or frequency info */}
+            <View style={styles.durationContainer}>
+              <Text style={styles.durationText}>{getDurationText()}</Text>
+              
+              {/* Show streak if available */}
+              {streak > 0 && (
+                <View style={styles.streakContainer}>
+                  <Text style={styles.fireEmoji}>🔥</Text>
+                  <Text style={styles.streakText}>{streak}</Text>
+                </View>
+              )}
+            </View>
           </View>
         </View>
-      </TouchableOpacity>
+      </View>
       
-      {/* Options Menu Modal */}
-      <Modal
-        visible={menuVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setMenuVisible(false)}
-      >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
-          onPress={() => setMenuVisible(false)}
-        >
-          <View 
-            style={[
-              styles.menuContainer,
-              { backgroundColor: colors.background, borderColor: colors.border }
-            ]}
-          >
-            <TouchableOpacity 
-              style={styles.menuItem} 
-              onPress={handleEdit}
-            >
-              <Feather name="edit" size={20} color={colors.text} />
-              <Text style={[styles.menuText, { color: colors.text }]}>Edit</Text>
-            </TouchableOpacity>
-            
-            <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
-            
-            <TouchableOpacity 
-              style={styles.menuItem} 
-              onPress={handleDelete}
-            >
-              <Feather name="trash-2" size={20} color={colors.error} />
-              <Text style={[styles.menuText, { color: colors.error }]}>Delete</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      <View style={styles.rightSection}>
+        {renderActionButton()}
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: metrics.borderRadius.medium,
-    padding: metrics.spacing.m,
-    paddingLeft: metrics.spacing.s,
-    marginBottom: metrics.spacing.m,
-    borderWidth: 1,
-  },
-  contentContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 16,
+    marginHorizontal: 16,
+  },
+  leftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  iconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   textContainer: {
     flex: 1,
-    marginRight: metrics.spacing.m,
   },
-  titleContainer: {
+  title: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1A202C',
+    marginBottom: 4,
+  },
+  detailsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: metrics.spacing.xs,
+    flexWrap: 'wrap',
   },
-  categoryDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: metrics.spacing.s,
-  },
-  timeEmoji: {
-    fontSize: 24,
-    marginRight: metrics.spacing.s,
-  },
-  iconWrapper: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
+  timeInfoContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginRight: metrics.spacing.s,
+  },
+  timeIcon: {
+    marginRight: 4,
+  },
+  timeText: {
+    fontSize: 14,
+    color: '#4A5568',
+  },
+  bullet: {
+    fontSize: 14,
+    color: '#4A5568',
+    marginHorizontal: 4,
   },
   durationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   durationText: {
-    fontSize: metrics.fontSize.xs,
-    marginLeft: metrics.spacing.xs,
+    fontSize: 14,
+    color: '#4A5568',
   },
-  rightContainer: {
+  streakContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 101, 101, 0.1)',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 8,
   },
-  menuButton: {
-    marginRight: metrics.spacing.m,
-    padding: metrics.spacing.xs,
+  fireEmoji: {
+    fontSize: 12,
+    marginRight: 2,
   },
-  title: {
-    fontSize: metrics.fontSize.l,
+  streakText: {
+    fontSize: 14,
+    color: '#FF6B6B',
     fontWeight: '600',
   },
-  streak: {
-    fontSize: metrics.fontSize.s,
-    marginRight: metrics.spacing.m,
-  },
-  modalOverlay: {
-    flex: 1,
+  rightSection: {
+    marginLeft: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  menuContainer: {
-    width: 200,
-    borderRadius: metrics.borderRadius.medium,
-    borderWidth: 1,
+  actionButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  timerContainer: {
+    alignItems: 'center',
+  },
+  progressBar: {
+    width: 64,
+    height: 6,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 3,
+    marginTop: 8,
     overflow: 'hidden',
   },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: metrics.spacing.m,
+  progressFill: {
+    height: '100%',
+    borderRadius: 3,
   },
-  menuText: {
-    marginLeft: metrics.spacing.m,
-    fontSize: metrics.fontSize.m,
-  },
-  menuDivider: {
-    height: 1,
-  },
-}); 
+});
+
+export default HabitItem; 

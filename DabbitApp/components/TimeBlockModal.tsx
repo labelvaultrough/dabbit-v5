@@ -103,12 +103,34 @@ export const TimeBlockModal = ({ visible, onClose }: TimeBlockModalProps) => {
     // Create an array to track coverage for each hour of the day (0-23)
     const hoursCoverage = Array(24).fill(false);
     
-    // Mark which hours are covered by each time block
+    // Check for valid time formats and initialize coverageMap
     for (const block of editedBlocks) {
-      const startHour = parseInt(block.startTime.split(':')[0], 10);
-      const startMinute = parseInt(block.startTime.split(':')[1], 10);
-      const endHour = parseInt(block.endTime.split(':')[0], 10);
-      const endMinute = parseInt(block.endTime.split(':')[1], 10);
+      // Validate time format
+      const startTimeMatch = block.startTime.match(/^(\d{1,2}):(\d{2})$/);
+      const endTimeMatch = block.endTime.match(/^(\d{1,2}):(\d{2})$/);
+      
+      if (!startTimeMatch || !endTimeMatch) {
+        Alert.alert(
+          'Invalid Time Format',
+          `Please use HH:MM format for all times.`
+        );
+        return false;
+      }
+      
+      const startHour = parseInt(startTimeMatch[1], 10);
+      const startMinute = parseInt(startTimeMatch[2], 10);
+      const endHour = parseInt(endTimeMatch[1], 10);
+      const endMinute = parseInt(endTimeMatch[2], 10);
+      
+      // Validate hour and minute ranges
+      if (startHour < 0 || startHour > 23 || endHour < 0 || endHour > 23 ||
+          startMinute < 0 || startMinute > 59 || endMinute < 0 || endMinute > 59) {
+        Alert.alert(
+          'Invalid Time Value',
+          `Hours must be 0-23 and minutes must be 0-59.`
+        );
+        return false;
+      }
       
       // Check that start time is before end time (except for Night which wraps around)
       if (block.id !== 'Night' && 
@@ -133,17 +155,15 @@ export const TimeBlockModal = ({ visible, onClose }: TimeBlockModalProps) => {
         }
       } else {
         // Normal time block (no wraparound)
-        // For start hour, only mark as covered if it starts at 0 minutes
-        if (startMinute === 0) {
-          hoursCoverage[startHour] = true;
-        }
+        // For the start hour
+        hoursCoverage[startHour] = true;
         
         // For full hours between start and end
         for (let h = startHour + 1; h < endHour; h++) {
           hoursCoverage[h] = true;
         }
         
-        // For end hour, always mark as covered since we're including up to XX:59
+        // For end hour
         if (endHour < 24) {
           hoursCoverage[endHour] = true;
         }
@@ -151,53 +171,66 @@ export const TimeBlockModal = ({ visible, onClose }: TimeBlockModalProps) => {
     }
     
     // Check for gaps in coverage
-    let gapFound = false;
-    let gapHour = -1;
-    
+    const uncoveredHours = [];
     for (let h = 0; h < 24; h++) {
       if (!hoursCoverage[h]) {
-        gapFound = true;
-        gapHour = h;
-        break;
+        uncoveredHours.push(h);
       }
     }
     
-    if (gapFound) {
+    if (uncoveredHours.length > 0) {
+      const hoursList = uncoveredHours
+        .map(h => `${h}:00${h < 12 ? ' AM' : ' PM'}`)
+        .join(', ');
+      
       Alert.alert(
         'Incomplete Time Coverage',
-        `Please ensure all hours of the day are covered. Hour ${gapHour}:00 is not included in any time block.`
+        `Please ensure all hours of the day are covered. The following hours are not included in any time block: ${hoursList}`
       );
       return false;
     }
     
-    // Check for transitions between time blocks
+    // Check for overlaps between time blocks
     for (let i = 0; i < editedBlocks.length; i++) {
-      for (let j = 0; j < editedBlocks.length; j++) {
-        if (i !== j) {
-          const blockA = editedBlocks[i];
-          const blockB = editedBlocks[j];
-          
-          // Skip Night block for this check since it wraps around
-          if (blockA.id === 'Night' || blockB.id === 'Night') continue;
-          
-          const blockAEndHour = parseInt(blockA.endTime.split(':')[0], 10);
-          const blockAEndMinute = parseInt(blockA.endTime.split(':')[1], 10);
-          const blockBStartHour = parseInt(blockB.startTime.split(':')[0], 10);
-          const blockBStartMinute = parseInt(blockB.startTime.split(':')[1], 10);
-          
-          // Check if blockA ends exactly when blockB starts
-          if (blockAEndHour === blockBStartHour && 
-              blockAEndMinute + 1 === blockBStartMinute) {
-            // This is a proper transition with no gap
-          } else if (blockAEndHour === blockBStartHour - 1 && 
-                     blockAEndMinute === 59 && blockBStartMinute === 0) {
-            // This is also a proper transition (e.g., 11:59 to 12:00)
-          }
+      for (let j = i + 1; j < editedBlocks.length; j++) {
+        const blockA = editedBlocks[i];
+        const blockB = editedBlocks[j];
+        
+        // Skip Night block for this check if it wraps around
+        const isNightWrapping = blockA.id === 'Night' && 
+          parseInt(blockA.startTime.split(':')[0], 10) > parseInt(blockA.endTime.split(':')[0], 10);
+        
+        if (isNightWrapping) continue;
+        
+        const a = {
+          start: timeToMinutes(blockA.startTime),
+          end: timeToMinutes(blockA.endTime)
+        };
+        
+        const b = {
+          start: timeToMinutes(blockB.startTime),
+          end: timeToMinutes(blockB.endTime)
+        };
+        
+        // Check for overlaps
+        if ((a.start < b.end && a.end > b.start) || 
+            (b.start < a.end && b.end > a.start)) {
+          Alert.alert(
+            'Time Block Overlap',
+            `${blockA.id} and ${blockB.id} have overlapping times. Please adjust the times so there's no overlap.`
+          );
+          return false;
         }
       }
     }
     
     return true;
+  };
+
+  // Helper function to convert HH:MM to minutes for easier comparison
+  const timeToMinutes = (timeStr: string): number => {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
   };
 
   return (

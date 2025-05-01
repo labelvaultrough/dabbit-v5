@@ -163,6 +163,28 @@ export default function SettingsScreen() {
         
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+            HABITS
+          </Text>
+          
+          <SettingsItem
+            title="Manage Habits"
+            subtitle="Edit or delete your habits"
+            icon="list"
+            iconColor={colors.primary}
+            onPress={() => {
+              try {
+                // @ts-ignore
+                router.push("/manage-habits");
+              } catch (error) {
+                console.error("Navigation error:", error);
+                Alert.alert('Navigation Error', 'Could not navigate to Manage Habits.');
+              }
+            }}
+          />
+        </View>
+        
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
             DATA
           </Text>
           

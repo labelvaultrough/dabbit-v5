@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, Modal, SafeAreaView, Platform, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, View, ScrollView, Modal, SafeAreaView, Platform, TouchableOpacity, FlatList } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { useHabits } from '@/context/HabitContext';
-import { Header } from '@/components/Header';
+import { Feather } from '@expo/vector-icons';
 import { HabitItem, getTimeBucketEmoji, getCurrentTimeBucket } from '@/components/HabitItem';
 import { EmptyState } from '@/components/EmptyState';
 import { HabitForm } from '@/components/HabitForm';
@@ -14,6 +14,96 @@ import FloatingActionButton from '@/components/FloatingActionButton';
 import ProgressGreeting from '@/components/ProgressGreeting';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BucketType } from '@/components/BucketSelector';
+
+// Header component specific to the home screen
+const Header = ({ 
+  title, 
+  selectedBucket, 
+  onSelectBucket 
+}: { 
+  title: string; 
+  selectedBucket: BucketType; 
+  onSelectBucket: (bucket: BucketType) => void;
+}) => {
+  const { colors } = useTheme();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const bucketOptions: BucketType[] = ['All', 'Morning', 'Afternoon', 'Evening', 'Night'];
+  
+  // Get color for each bucket option
+  const getBucketColor = (bucket: BucketType) => {
+    switch(bucket) {
+      case 'Morning': return '#FF9F1C'; // Orange
+      case 'Afternoon': return '#3498DB'; // Blue
+      case 'Evening': return '#9B59B6'; // Purple
+      case 'Night': return '#34495E'; // Dark Blue
+      default: return '#FF9F1C'; // Default orange
+    }
+  };
+  
+  // Get icon for each bucket option
+  const getBucketIcon = (bucket: BucketType) => {
+    switch(bucket) {
+      case 'Morning': return 'sunrise';
+      case 'Afternoon': return 'sun';
+      case 'Evening': return 'sunset';
+      case 'Night': return 'moon';
+      default: return 'list';
+    }
+  };
+  
+  return (
+    <View style={styles.headerContainer}>
+      <Text style={styles.headerTitle}>{title}</Text>
+      
+      <View style={styles.bucketSelector}>
+        <TouchableOpacity 
+          style={[styles.bucketButton, { backgroundColor: colors.surface }]}
+          onPress={() => setShowDropdown(!showDropdown)}
+          activeOpacity={0.7}
+        >
+          <Feather 
+            name={getBucketIcon(selectedBucket)} 
+            size={20} 
+            color={getBucketColor(selectedBucket)} 
+            style={styles.bucketIcon} 
+          />
+          <Text style={styles.bucketText}>{selectedBucket}</Text>
+          <Feather name={showDropdown ? "chevron-up" : "chevron-down"} size={20} color={colors.text} />
+        </TouchableOpacity>
+        
+        {/* Dropdown menu */}
+        {showDropdown && (
+          <View style={[styles.dropdownContainer, { backgroundColor: colors.surface }]}>
+            {bucketOptions.map((bucket) => (
+              <TouchableOpacity
+                key={bucket}
+                style={[
+                  styles.dropdownItem,
+                  selectedBucket === bucket && { backgroundColor: colors.background }
+                ]}
+                onPress={() => {
+                  onSelectBucket(bucket);
+                  setShowDropdown(false);
+                }}
+              >
+                <Feather 
+                  name={getBucketIcon(bucket)} 
+                  size={18} 
+                  color={getBucketColor(bucket)} 
+                  style={styles.dropdownIcon} 
+                />
+                <Text style={styles.dropdownText}>{bucket}</Text>
+                {selectedBucket === bucket && (
+                  <Feather name="check" size={18} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
+    </View>
+  );
+};
 
 export default function HomeScreen() {
   const { colors } = useTheme();
@@ -59,28 +149,10 @@ export default function HomeScreen() {
   };
   
   const handleDeleteHabit = (habit: Habit) => {
-    Alert.alert(
-      'Delete Habit',
-      `Are you sure you want to delete "${habit.name}"?`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteHabit(habit.id);
-            } catch (error) {
-              console.error('Error deleting habit:', error);
-              Alert.alert('Error', 'Failed to delete the habit.');
-            }
-          },
-        },
-      ]
-    );
+    // Simple confirmation
+    if (confirm(`Are you sure you want to delete "${habit.name}"?`)) {
+      deleteHabit(habit.id);
+    }
   };
   
   const handleCompletionToggle = (habitId: string) => {
@@ -104,21 +176,20 @@ export default function HomeScreen() {
   
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={{ paddingTop: insets.top + 12 }}>
+      <View style={{ paddingTop: insets.top }}>
         <ProgressGreeting 
           username={username}
           completionPercentage={getDailyProgress()}
           timeLeft={calculateTimeLeft()}
           date={today}
         />
+        
+        <Header
+          title="Today's Habits"
+          selectedBucket={selectedBucket}
+          onSelectBucket={setSelectedBucket}
+        />
       </View>
-      
-      <Header
-        title="Today's Habits"
-        showBucketSelector={true}
-        selectedBucket={selectedBucket}
-        onSelectBucket={setSelectedBucket}
-      />
       
       {activeHabits.length === 0 ? (
         <EmptyState
@@ -141,18 +212,17 @@ export default function HomeScreen() {
         />
       ) : (
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          <View style={styles.habitsContainer}>
-            {filteredHabits.map(habit => (
-              <HabitItem
-                key={habit.id}
-                habit={habit}
-                date={todayFormatted}
-                onPress={handleCompletionToggle}
-                onEdit={handleEditHabit}
-                onDelete={handleDeleteHabit}
-              />
-            ))}
-          </View>
+          {filteredHabits.map(habit => (
+            <HabitItem
+              key={habit.id}
+              habit={habit}
+              date={todayFormatted}
+              onPress={handleCompletionToggle}
+              onEdit={handleEditHabit}
+              onDelete={handleDeleteHabit}
+            />
+          ))}
+          <View style={{ height: 80 }} />
         </ScrollView>
       )}
       
@@ -200,12 +270,67 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollView: {
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
+  bucketSelector: {
+    position: 'relative',
+  },
+  bucketButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  bucketIcon: {
+    marginRight: 6,
+  },
+  bucketText: {
+    fontSize: 16,
+    marginRight: 6,
+  },
+  dropdownContainer: {
+    position: 'absolute',
+    top: 45,
+    right: 0,
+    width: 180,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 1000,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  dropdownIcon: {
+    marginRight: 10,
+  },
+  dropdownText: {
+    fontSize: 16,
     flex: 1,
   },
-  habitsContainer: {
-    padding: metrics.spacing.l,
-    paddingTop: metrics.spacing.s,
+  scrollView: {
+    flex: 1,
+    marginTop: 8,
   },
   modalContainer: {
     flex: 1,

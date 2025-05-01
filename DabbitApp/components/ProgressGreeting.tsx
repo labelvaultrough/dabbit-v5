@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { Text } from '@/components/Themed';
 import { useTheme } from '@/context/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { format } from 'date-fns';
 
 interface ProgressGreetingProps {
@@ -26,27 +26,13 @@ export function ProgressGreeting({ username, completionPercentage, timeLeft, dat
 
   // Get motivational message based on completion percentage
   const getMotivationalMessage = () => {
-    if (completionPercentage === 100) return 'All done for today! Amazing work! 🎉';
-    if (completionPercentage >= 75) return 'Almost there! Keep going! 💪';
     if (completionPercentage >= 50) return 'Halfway there! You got this! 🚀';
-    if (completionPercentage >= 25) return 'Good progress! Keep it up! 👍';
-    if (completionPercentage > 0) return 'You\'ve made a start! Keep going! 🌱';
     return 'Time to start building your habits! 🌟';
-  };
-
-  // Get appropriate emoji for progress
-  const getProgressEmoji = () => {
-    if (completionPercentage === 100) return '🎯';
-    if (completionPercentage >= 75) return '🔥';
-    if (completionPercentage >= 50) return '💫';
-    if (completionPercentage >= 25) return '✨';
-    if (completionPercentage > 0) return '🌱';
-    return '🚀';
   };
 
   return (
     <LinearGradient
-      colors={colors.primaryGradient as [string, string, ...string[]]}
+      colors={['#FF6B81', '#FF8A9B']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 0 }}
       style={styles.container}
@@ -54,7 +40,7 @@ export function ProgressGreeting({ username, completionPercentage, timeLeft, dat
       <View style={styles.contentContainer}>
         <View style={styles.greetingRow}>
           <Text style={styles.greeting}>{getGreeting()}, {username}!</Text>
-          <Text style={styles.emoji}>{getProgressEmoji()}</Text>
+          <Feather name="star" size={24} color="#FFD700" />
         </View>
         
         <Text style={styles.dateText}>{format(date, 'EEEE, MMMM d')}</Text>
@@ -83,7 +69,7 @@ export function ProgressGreeting({ username, completionPercentage, timeLeft, dat
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 16,
+    borderRadius: 24,
     overflow: 'hidden',
     marginBottom: 16,
     marginHorizontal: 16,
@@ -94,7 +80,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   contentContainer: {
-    padding: 16,
+    padding: 20,
   },
   greetingRow: {
     flexDirection: 'row',
@@ -103,17 +89,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   greeting: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     color: 'white',
   },
-  emoji: {
-    fontSize: 24,
-  },
   dateText: {
-    fontSize: 14,
+    fontSize: 16,
     color: 'rgba(255, 255, 255, 0.9)',
-    marginBottom: 12,
+    marginTop: 2,
+    marginBottom: 16,
   },
   progressContainer: {
     marginTop: 4,
@@ -124,13 +108,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   progressText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: 'white',
   },
   timeLeft: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
   },
   progressBarBackground: {
     height: 8,
@@ -145,11 +129,11 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   motivationalText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '500',
     color: 'white',
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: 8,
   },
 });
 

@@ -3,6 +3,7 @@ import { StyleSheet, TouchableOpacity } from 'react-native';
 import { AntDesign } from '@expo/vector-icons';
 import { useTheme } from '@/context/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
+import { addAlpha } from '@/utils/colorUtils';
 
 interface FloatingActionButtonProps {
   onPress: () => void;
@@ -11,9 +12,17 @@ interface FloatingActionButtonProps {
 const FloatingActionButton = ({ onPress }: FloatingActionButtonProps) => {
   const { colors } = useTheme();
   
+  // Use our utility function to get a consistent shadow color with opacity
+  const shadowColorWithOpacity = addAlpha('#000', 0.25);
+  
   return (
     <TouchableOpacity 
-      style={styles.container} 
+      style={[
+        styles.container,
+        {
+          shadowColor: shadowColorWithOpacity,
+        }
+      ]} 
       onPress={onPress}
       activeOpacity={0.8}
     >
@@ -38,9 +47,8 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
     elevation: 5,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.25, // This opacity is still needed for the shadow system
     shadowRadius: 3.84,
   },
   button: {

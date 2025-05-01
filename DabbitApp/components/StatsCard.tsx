@@ -3,6 +3,8 @@ import { StyleSheet, View, Text, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/context/ThemeContext';
 import { metrics } from '@/constants/metrics';
+import { Feather } from '@expo/vector-icons';
+import { addAlpha } from '@/utils/colorUtils';
 
 type StatsCardProps = {
   title: string;
@@ -67,9 +69,8 @@ const styles = StyleSheet.create({
     minHeight: 160,
   },
   title: {
-    color: '#FFFFFF',
+    color: addAlpha('#FFFFFF', 0.9),
     fontSize: metrics.fontSize.s,
-    opacity: 0.9,
     marginBottom: metrics.spacing.xs,
   },
   valueContainer: {
@@ -86,9 +87,8 @@ const styles = StyleSheet.create({
     fontSize: metrics.fontSize.xxxl,
   },
   subtitle: {
-    color: '#FFFFFF',
+    color: addAlpha('#FFFFFF', 0.8),
     fontSize: metrics.fontSize.xs,
-    opacity: 0.8,
     marginTop: metrics.spacing.xs,
   },
   iconContainer: {
