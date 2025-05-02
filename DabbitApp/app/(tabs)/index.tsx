@@ -228,32 +228,24 @@ export default function HomeScreen() {
       
       <FloatingActionButton onPress={handleAddHabit} />
       
-      <Modal
-        visible={showModal}
-        animationType="slide"
-        transparent
-        onRequestClose={handleCloseModal}
-      >
-        <View style={styles.modalContainer}>
-          <View 
-            style={[
-              styles.modalContent, 
-              { 
-                backgroundColor: colors.background,
-                ...Platform.select({
-                  ios: {
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.25,
-                    shadowRadius: 4,
-                  },
-                  android: {
-                    elevation: 5,
-                  },
-                }),
-              }
-            ]}
-          >
+      {showModal && (
+        <View style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000,
+        }}>
+          <View style={{
+            width: 320,
+            maxHeight: 600,
+            backgroundColor: 'white',
+            borderRadius: 16,
+          }}>
             <HabitForm
               habit={selectedHabit}
               onClose={handleCloseModal}
@@ -261,7 +253,7 @@ export default function HomeScreen() {
             />
           </View>
         </View>
-      </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -332,14 +324,23 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: 8,
   },
-  modalContainer: {
+  modalOverlay: {
     flex: 1,
-    justifyContent: 'flex-end',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
-  modalContent: {
-    borderTopLeftRadius: metrics.borderRadius.large,
-    borderTopRightRadius: metrics.borderRadius.large,
-    height: '90%',
+  floatingModal: {
+    width: 320,
+    maxHeight: 600,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
 });

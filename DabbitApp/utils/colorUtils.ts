@@ -187,4 +187,131 @@ export const isLightColor = (color: string): boolean => {
   
   // Return true for light colors (brightness > 0.5)
   return brightness > 0.5;
+};
+
+/**
+ * Convert a hex color to its RGB components
+ */
+export const hexToRgb = (hex: string): { r: number; g: number; b: number } => {
+  // Remove hash if present
+  hex = hex.replace(/^#/, '');
+  
+  // Parse hex
+  let r, g, b;
+  if (hex.length === 3) {
+    r = parseInt(hex.charAt(0) + hex.charAt(0), 16);
+    g = parseInt(hex.charAt(1) + hex.charAt(1), 16);
+    b = parseInt(hex.charAt(2) + hex.charAt(2), 16);
+  } else {
+    r = parseInt(hex.substring(0, 2), 16);
+    g = parseInt(hex.substring(2, 4), 16);
+    b = parseInt(hex.substring(4, 6), 16);
+  }
+  
+  return { r, g, b };
+};
+
+/**
+ * Convert RGB components to a hex color
+ */
+export const rgbToHex = (r: number, g: number, b: number): string => {
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+};
+
+/**
+ * Generate a light pastel shade from a color
+ * intensity: 0-1, where 0 is lightest and 1 is the original color
+ */
+export const getLightPastelShade = (color: string, intensity: number = 0.15): string => {
+  const { r, g, b } = hexToRgb(color);
+  
+  // Mix with white to create a pastel shade
+  const pastelR = Math.round(r * intensity + 255 * (1 - intensity));
+  const pastelG = Math.round(g * intensity + 255 * (1 - intensity));
+  const pastelB = Math.round(b * intensity + 255 * (1 - intensity));
+  
+  return rgbToHex(pastelR, pastelG, pastelB);
+};
+
+/**
+ * Get a theme-aware color for a category
+ */
+export const getCategoryColor = (categoryId: string, categories: any[], isDark: boolean): string => {
+  const category = categories.find(cat => cat.id === categoryId);
+  if (!category) return isDark ? Colors.dark.primary : Colors.light.primary;
+  
+  const colors = isDark ? Colors.dark.categories : Colors.light.categories;
+  const colorKey = category.color as keyof typeof colors;
+  const color = colors[colorKey];
+  
+  // Ensure we return a string (not an array for gradients)
+  return typeof color === 'string' ? color : colors.blue;
+};
+
+/**
+ * Get a theme-aware background color for a habit
+ */
+export const getHabitBackgroundColor = (
+  categoryId: string, 
+  isDark: boolean,
+  isCompleted: boolean
+): string => {
+  // If completed, use a light gray background
+  if (isCompleted) {
+    return isDark ? '#2D3748' : '#F5F5F5';
+  }
+  
+  // Base colors for categories
+  const colors = isDark ? Colors.dark.categories : Colors.light.categories;
+  
+  // Find category color or use a default
+  let baseColor = colors.blue;
+  
+  try {
+    // Handle categories
+    if (categoryId) {
+      // Get the category color directly from our colors object
+      // The key is the category color name like 'blue', 'green', etc.
+      const category = colors[categoryId as keyof typeof colors];
+      if (category) {
+        baseColor = typeof category === 'string' ? category : colors.blue;
+      }
+    }
+  } catch (error) {
+    console.warn('Error getting category color:', error);
+  }
+  
+  // Create a light pastel version for the background
+  return getLightPastelShade(baseColor, 0.15);
+};
+
+/**
+ * Get a theme-aware color for habit action buttons
+ */
+export const getActionButtonColor = (
+  categoryId: string,
+  isDark: boolean
+): string => {
+  const colors = isDark ? Colors.dark.categories : Colors.light.categories;
+  
+  // Default to blue if no category
+  if (!categoryId) return colors.blue;
+  
+  // Get the category color directly from our colors object
+  try {
+    const categoryColor = colors[categoryId as keyof typeof colors];
+    return typeof categoryColor === 'string' ? categoryColor : colors.blue;
+  } catch (error) {
+    console.warn('Error getting action button color:', error);
+    return colors.blue;
+  }
+};
+
+export default {
+  hexToRgb,
+  rgbToHex,
+  getLightPastelShade,
+  getCategoryColor,
+  getHabitBackgroundColor,
+  getActionButtonColor
 }; 

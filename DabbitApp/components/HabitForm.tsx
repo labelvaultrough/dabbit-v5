@@ -6,10 +6,8 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Switch,
   Platform,
-  Pressable,
-  Alert,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { useHabits } from '@/context/HabitContext';
@@ -31,25 +29,18 @@ export const HabitForm = ({ habit, onClose, onSave }: HabitFormProps) => {
   const { colors } = useTheme();
   const { addHabit, updateHabit, categories } = useHabits();
 
+  // Form state
   const [name, setName] = useState('');
   const [frequencyType, setFrequencyType] = useState<FrequencyType>('daily');
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>(categories[0]?.id);
   const [selectedTime, setSelectedTime] = useState<Date | null>(null);
-  const [reminderEnabled, setReminderEnabled] = useState<boolean>(true); // Default to enabled
-  const [showReminderInfo, setShowReminderInfo] = useState<boolean>(false);
-  
-  // New state for icon and duration
+  const [reminderEnabled, setReminderEnabled] = useState<boolean>(true);
   const [selectedIcon, setSelectedIcon] = useState<string | undefined>(undefined);
   const [selectedDuration, setSelectedDuration] = useState<number | undefined>(undefined);
-  
-  // Validation state
-  const [validationErrors, setValidationErrors] = useState<{
-    name?: string;
-    category?: string;
-    time?: string;
-  }>({});
-  const [showValidationErrors, setShowValidationErrors] = useState(false);
+
+  // Error state
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Initialize form with habit data if editing
   useEffect(() => {
@@ -59,7 +50,6 @@ export const HabitForm = ({ habit, onClose, onSave }: HabitFormProps) => {
       setSelectedDays(habit.frequency.custom_days || []);
       setSelectedCategory(habit.category);
       
-      // Set the time if it exists
       if (habit.time) {
         const [hours, minutes] = habit.time.split(':').map(Number);
         const timeDate = new Date();
@@ -68,10 +58,8 @@ export const HabitForm = ({ habit, onClose, onSave }: HabitFormProps) => {
         setSelectedTime(timeDate);
       }
       
-      // Set reminder enabled status (default to true if not specified)
       setReminderEnabled(habit.reminderEnabled !== false);
       
-      // Set icon and duration if they exist
       if (habit.icon) {
         setSelectedIcon(habit.icon);
       }
@@ -82,66 +70,14 @@ export const HabitForm = ({ habit, onClose, onSave }: HabitFormProps) => {
     }
   }, [habit]);
 
-  // Validate form and return true if valid
-  const validateForm = () => {
-    const errors: {
-      name?: string;
-      category?: string;
-      time?: string;
-    } = {};
-    
-    if (!name.trim()) {
-      errors.name = 'Please add a habit name';
-    }
-    
-    if (!selectedCategory) {
-      errors.category = 'Please select a category';
-    }
-    
-    if (!selectedTime) {
-      errors.time = 'Please set a reminder time';
-    }
-    
-    setValidationErrors(errors);
-    
-    // If we have any errors, show them
-    if (Object.keys(errors).length > 0) {
-      setShowValidationErrors(true);
-      
-      // Hide validation errors after 3 seconds
-      setTimeout(() => {
-        setShowValidationErrors(false);
-      }, 3000);
-      
-      return false;
-    }
-    
-    return true;
-  };
-
   const handleSave = async () => {
-    // Validate form first
-    const errors: {
-      name?: string;
-      category?: string;
-      time?: string;
-    } = {};
-
-    if (!name.trim()) {
-      errors.name = 'Name is required';
-    }
-
-    if (!selectedCategory) {
-      errors.category = 'Category is required';
-    }
-
-    if (reminderEnabled && !selectedTime) {
-      errors.time = 'Time is required for reminders';
-    }
-
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors);
-      setShowValidationErrors(true);
+    // Validate form
+    const newErrors: Record<string, string> = {};
+    if (!name.trim()) newErrors.name = 'Name is required';
+    if (!selectedCategory) newErrors.category = 'Category is required';
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
@@ -167,9 +103,9 @@ export const HabitForm = ({ habit, onClose, onSave }: HabitFormProps) => {
         frequency,
         category: selectedCategory,
         time: formattedTime,
-        reminderEnabled, // Include the reminder setting
-        icon: selectedIcon, // Add icon
-        duration: selectedDuration, // Add duration
+        reminderEnabled,
+        icon: selectedIcon,
+        duration: selectedDuration,
       });
     } else {
       // Adding new habit
@@ -178,17 +114,14 @@ export const HabitForm = ({ habit, onClose, onSave }: HabitFormProps) => {
         frequency,
         category: selectedCategory,
         time: formattedTime,
-        reminderEnabled, // Include the reminder setting
-        icon: selectedIcon, // Add icon
-        duration: selectedDuration, // Add duration
+        reminderEnabled,
+        icon: selectedIcon,
+        duration: selectedDuration,
         archived: false,
       });
     }
 
-    if (onSave) {
-      onSave();
-    }
-    onClose();
+    onSave();
   };
 
   const toggleDay = (day: number) => {
@@ -196,16 +129,6 @@ export const HabitForm = ({ habit, onClose, onSave }: HabitFormProps) => {
       prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
     );
   };
-  
-  const toggleReminder = () => {
-    setReminderEnabled(!reminderEnabled);
-  };
-  
-  const toggleReminderInfo = () => {
-    setShowReminderInfo(!showReminderInfo);
-  };
-
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   // Format categories for dropdown
   const categoryItems = categories.map(category => ({
@@ -214,210 +137,260 @@ export const HabitForm = ({ habit, onClose, onSave }: HabitFormProps) => {
     color: category.color,
   }));
 
+  // Consistent styles
+  const styles = {
+    labelText: {
+      fontSize: 14,
+      fontWeight: '600' as const,
+      color: '#333333',
+      marginBottom: 6
+    },
+    inputHeight: 42,
+    spacing: 16,
+    borderRadius: 8,
+    controlBorderColor: '#E2E2E2',
+    primaryColor: '#F95A7F',
+    errorText: {
+      color: 'red',
+      fontSize: 12,
+      marginTop: 2
+    }
+  };
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+    <View style={{width: '100%', height: '100%', backgroundColor: 'white', borderRadius: 16, overflow: 'hidden'}}>
+      {/* Header */}
+      <View style={{
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: styles.primaryColor,
+        height: 50,
+        paddingHorizontal: 16,
+      }}>
         <TouchableOpacity onPress={onClose}>
-          <Feather name="x" size={24} color={colors.text} />
+          <Feather name="x" size={22} color="white" />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
+        
+        <Text style={{fontSize: 16, fontWeight: '600', color: 'white'}}>
           {habit ? 'Edit Habit' : 'New Habit'}
         </Text>
+        
         <TouchableOpacity onPress={handleSave}>
-          <Feather name="check" size={24} color={colors.primary} />
+          <Feather name="check" size={22} color="white" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.form}>
+      <ScrollView style={{flex: 1, padding: 16, backgroundColor: 'white'}}>
         {/* Name Input */}
-        <View style={styles.formGroup}>
-          <Text style={[styles.label, { color: colors.text }]}>Name</Text>
+        <View style={{marginBottom: styles.spacing}}>
+          <Text style={styles.labelText}>Name</Text>
           <TextInput
-            style={[
-              styles.input,
-              validationErrors.name && showValidationErrors ? { borderColor: colors.error } : { borderColor: colors.border },
-              { color: colors.text, backgroundColor: colors.surface },
-            ]}
+            style={{
+              height: styles.inputHeight, 
+              borderWidth: 1, 
+              borderColor: styles.controlBorderColor, 
+              borderRadius: styles.borderRadius,
+              paddingHorizontal: 12,
+              fontSize: 14,
+              backgroundColor: 'white',
+              color: '#333333'
+            }}
             value={name}
             onChangeText={setName}
             placeholder="Habit name"
-            placeholderTextColor={colors.textSecondary}
+            placeholderTextColor="#999999"
           />
-          {validationErrors.name && showValidationErrors && (
-            <Text style={[styles.errorText, { color: colors.error }]}>
-              {validationErrors.name}
-            </Text>
-          )}
+          {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
         </View>
 
-        {/* Icon and Duration Selectors (side by side) */}
-        <View style={styles.formGroup}>
-          <View style={styles.timeReminderContainer}>
-            {/* Icon Selector - Left Side */}
-            <View style={styles.timeContainer}>
-              <IconSelector 
-                label="Icon"
+        {/* Icon and Duration row */}
+        <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: styles.spacing}}>
+          <View style={{width: '48%'}}>
+            <Text style={styles.labelText}>Icon</Text>
+            <View style={{
+              height: styles.inputHeight,
+              borderWidth: 1,
+              borderColor: styles.controlBorderColor,
+              borderRadius: styles.borderRadius,
+              overflow: 'hidden'
+            }}>
+              <IconSelector
                 value={selectedIcon}
                 onChange={setSelectedIcon}
               />
             </View>
+          </View>
 
-            {/* Duration Selector - Right Side */}
-            <View style={styles.reminderContainer}>
-              <DurationSelector 
-                label="Duration" 
-                value={selectedDuration} 
+          <View style={{width: '48%'}}>
+            <Text style={styles.labelText}>Duration</Text>
+            <View style={{
+              height: styles.inputHeight,
+              borderWidth: 1,
+              borderColor: styles.controlBorderColor,
+              borderRadius: styles.borderRadius,
+              overflow: 'hidden'
+            }}>
+              <DurationSelector
+                value={selectedDuration}
                 onChange={setSelectedDuration}
               />
             </View>
           </View>
         </View>
 
-        {/* Frequency Selection */}
-        <View style={styles.formGroup}>
-          <Text style={[styles.label, { color: colors.text }]}>Frequency</Text>
-          <View style={styles.frequencyOptions}>
+        {/* Frequency */}
+        <View style={{marginBottom: styles.spacing}}>
+          <Text style={styles.labelText}>Frequency</Text>
+          <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6}}>
             {(['daily', 'weekly', 'custom', 'one-time'] as FrequencyType[]).map(type => (
               <TouchableOpacity
                 key={type}
-                style={[
-                  styles.frequencyOption,
-                  {
-                    backgroundColor:
-                      frequencyType === type ? `${colors.primary}20` : colors.surface,
-                    borderColor: frequencyType === type ? colors.primary : colors.border,
-                  },
-                ]}
+                style={{
+                  height: 32,
+                  paddingHorizontal: 8,
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  backgroundColor: frequencyType === type ? '#FEE5E9' : 'white',
+                  borderColor: frequencyType === type ? styles.primaryColor : styles.controlBorderColor,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '23%'
+                }}
                 onPress={() => setFrequencyType(type)}
               >
-                <Text
-                  style={[
-                    styles.frequencyText,
-                    { color: frequencyType === type ? colors.primary : colors.text },
-                  ]}
-                >
-                  {type === 'one-time' ? 'One-time' : type.charAt(0).toUpperCase() + type.slice(1)}
+                <Text style={{
+                  color: frequencyType === type ? styles.primaryColor : '#666666',
+                  fontWeight: '600',
+                  fontSize: 12
+                }}>
+                  {type === 'one-time' ? 'Today' : type.charAt(0).toUpperCase() + type.slice(1)}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
-        </View>
 
-        {/* Days Selection (for custom frequency) */}
-        {frequencyType === 'custom' && (
-          <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Select Days</Text>
-            <View style={styles.daysContainer}>
-              {dayNames.map((day, index) => (
+          {frequencyType === 'custom' && (
+            <View style={{flexDirection: 'row', justifyContent: 'space-between', marginTop: 6}}>
+              {[0, 1, 2, 3, 4, 5, 6].map((day) => (
                 <TouchableOpacity
                   key={day}
-                  style={[
-                    styles.dayButton,
-                    {
-                      backgroundColor: selectedDays.includes(index)
-                        ? colors.primary
-                        : colors.surface,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                  onPress={() => toggleDay(index)}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    backgroundColor: selectedDays.includes(day) ? styles.primaryColor : '#F5F5F5',
+                  }}
+                  onPress={() => toggleDay(day)}
                 >
-                  <Text
-                    style={[
-                      styles.dayText,
-                      { color: selectedDays.includes(index) ? '#FFFFFF' : colors.text },
-                    ]}
-                  >
-                    {day}
+                  <Text style={{
+                    color: selectedDays.includes(day) ? 'white' : '#666666',
+                    fontWeight: '500',
+                    fontSize: 12
+                  }}>
+                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'][day]}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
-          </View>
-        )}
+          )}
+        </View>
 
-        {/* Time and Reminder Selection (side by side) */}
-        <View style={styles.formGroup}>
-          <View style={styles.timeReminderContainer}>
-            {/* Time Selection - Left Side */}
-            <View style={styles.timeContainer}>
-              <Text style={[styles.label, { color: colors.text }]}>Time</Text>
+        {/* Time and Reminder in single row */}
+        <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: styles.spacing}}>
+          {/* Time */}
+          <View style={{width: '48%'}}>
+            <Text style={styles.labelText}>Time</Text>
+            <View style={{
+              height: styles.inputHeight,
+              borderWidth: 1,
+              borderColor: styles.controlBorderColor,
+              borderRadius: styles.borderRadius,
+              overflow: 'hidden'
+            }}>
               <TimePickerField
                 value={selectedTime}
                 onChange={setSelectedTime}
                 placeholder="Set time"
-                error={validationErrors.time && showValidationErrors ? validationErrors.time : undefined}
-                errorColor={colors.error}
               />
             </View>
+            {errors.time && <Text style={styles.errorText}>{errors.time}</Text>}
+          </View>
 
-            {/* Reminder Toggle - Right Side */}
-            <View style={styles.reminderContainer}>
-              <View style={styles.reminderLabelContainer}>
-                <Text style={[styles.label, { color: colors.text, marginBottom: 0 }]}>Reminders</Text>
-                <TouchableOpacity 
-                  style={styles.infoButton} 
-                  onPress={toggleReminderInfo}
-                >
-                  <Feather name="info" size={16} color={colors.textSecondary} />
-                </TouchableOpacity>
-              </View>
+          {/* Reminder */}
+          <View style={{width: '48%'}}>
+            <Text style={styles.labelText}>Reminder</Text>
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              height: styles.inputHeight,
+              borderRadius: styles.borderRadius,
+              borderWidth: 1,
+              borderColor: styles.controlBorderColor,
+              paddingHorizontal: 12,
+              backgroundColor: 'white'
+            }}>
+              <Feather name="bell" size={16} color={styles.primaryColor} style={{marginRight: 6}} />
               <TouchableOpacity 
-                style={[styles.reminderToggle, { marginTop: 8 }]} 
-                onPress={toggleReminder}
-                activeOpacity={0.7}
+                style={{
+                  width: 40,
+                  height: 24,
+                  backgroundColor: reminderEnabled ? '#FEE5E9' : '#F5F5F5',
+                  borderRadius: 12,
+                  alignItems: reminderEnabled ? 'flex-end' : 'flex-start',
+                  paddingHorizontal: 2,
+                  justifyContent: 'center',
+                  marginLeft: 'auto'
+                }}
+                onPress={() => setReminderEnabled(!reminderEnabled)}
               >
-                <Feather 
-                  name={reminderEnabled ? "bell" : "bell-off"} 
-                  size={24} 
-                  color={reminderEnabled ? colors.primary : colors.textSecondary} 
-                />
-                <Text style={[
-                  styles.reminderText, 
-                  { color: reminderEnabled ? colors.primary : colors.textSecondary }
-                ]}>
-                  {reminderEnabled ? "Enabled" : "Disabled"}
-                </Text>
+                <View style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: 10,
+                  backgroundColor: reminderEnabled ? styles.primaryColor : '#CCCCCC'
+                }} />
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* Reminder Info Message (shows only when info button clicked) */}
-          {showReminderInfo && (
-            <View style={[styles.infoBox, { backgroundColor: `${colors.primary}10`, borderColor: colors.primary }]}>
-              <Text style={[styles.infoText, { color: colors.text }]}>
-                Toggle to enable or disable reminders for this specific habit. Note: If reminders are turned off in settings, no reminders will be shown even if enabled here.
-              </Text>
-            </View>
-          )}
         </View>
 
-        {/* Category Selection with Dropdown */}
-        <View style={styles.formGroup}>
-          <Dropdown
-            label="Category"
-            items={categoryItems}
-            selectedItemId={selectedCategory}
-            onSelect={(categoryId) => {
-              if (categoryId) {
-                setSelectedCategory(categoryId);
-              }
-            }}
-            placeholder="Select a category"
-          />
-          {validationErrors.category && showValidationErrors && (
-            <Text style={[styles.errorText, { color: colors.error }]}>
-              {validationErrors.category}
-            </Text>
-          )}
+        {/* Category */}
+        <View style={{marginBottom: styles.spacing}}>
+          <Text style={styles.labelText}>Category</Text>
+          <View style={{
+            height: styles.inputHeight,
+            borderWidth: 1,
+            borderColor: styles.controlBorderColor,
+            borderRadius: styles.borderRadius,
+            overflow: 'hidden'
+          }}>
+            <Dropdown
+              label=""
+              items={categoryItems}
+              selectedItemId={selectedCategory}
+              onSelect={(id) => setSelectedCategory(id || categories[0]?.id)}
+            />
+          </View>
+          {errors.category && <Text style={styles.errorText}>{errors.category}</Text>}
         </View>
 
-        {/* Submit Button */}
+        {/* Submit button */}
         <TouchableOpacity
-          style={[styles.saveButton, { backgroundColor: colors.primary }]}
+          style={{
+            backgroundColor: styles.primaryColor,
+            height: 46,
+            borderRadius: 23,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginTop: 8,
+            marginBottom: 16
+          }}
           onPress={handleSave}
         >
-          <Text style={styles.saveButtonText}>
+          <Text style={{color: 'white', fontSize: 16, fontWeight: '600'}}>
             {habit ? 'Update Habit' : 'Create Habit'}
           </Text>
         </TouchableOpacity>
@@ -426,128 +399,4 @@ export const HabitForm = ({ habit, onClose, onSave }: HabitFormProps) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: metrics.spacing.l,
-    paddingVertical: metrics.spacing.m,
-    borderBottomWidth: 1,
-  },
-  headerTitle: {
-    fontSize: metrics.fontSize.l,
-    fontWeight: '600',
-  },
-  form: {
-    padding: metrics.spacing.l,
-  },
-  formGroup: {
-    marginBottom: metrics.spacing.l,
-  },
-  label: {
-    fontSize: metrics.fontSize.m,
-    marginBottom: metrics.spacing.s,
-    fontWeight: '500',
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: metrics.borderRadius.medium,
-    padding: metrics.spacing.m,
-    fontSize: metrics.fontSize.m,
-  },
-  frequencyOptions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  frequencyOption: {
-    width: '24%',
-    padding: metrics.spacing.s,
-    borderRadius: metrics.borderRadius.medium,
-    alignItems: 'center',
-    marginBottom: metrics.spacing.s,
-    borderWidth: 1,
-  },
-  frequencyText: {
-    fontSize: metrics.fontSize.xs,
-    fontWeight: '500',
-  },
-  daysContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  dayButton: {
-    width: '13%',
-    aspectRatio: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: metrics.borderRadius.small,
-    marginBottom: metrics.spacing.s,
-    borderWidth: 1,
-  },
-  dayText: {
-    fontSize: metrics.fontSize.xs,
-    fontWeight: '500',
-  },
-  timeReminderContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  timeContainer: {
-    flex: 1,
-    marginRight: metrics.spacing.m,
-  },
-  reminderContainer: {
-    flex: 1,
-  },
-  reminderLabelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  infoButton: {
-    marginLeft: metrics.spacing.xs,
-    padding: metrics.spacing.xs,
-  },
-  infoBox: {
-    padding: metrics.spacing.m,
-    borderRadius: metrics.borderRadius.small,
-    marginTop: metrics.spacing.xs,
-    borderWidth: 1,
-  },
-  infoText: {
-    fontSize: metrics.fontSize.xs,
-    lineHeight: 16,
-  },
-  reminderToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: metrics.spacing.s,
-    borderRadius: metrics.borderRadius.small,
-  },
-  reminderText: {
-    fontSize: metrics.fontSize.s,
-    fontWeight: '500',
-    marginLeft: metrics.spacing.s,
-  },
-  saveButton: {
-    padding: metrics.spacing.m,
-    borderRadius: metrics.borderRadius.medium,
-    alignItems: 'center',
-    marginTop: metrics.spacing.m,
-  },
-  saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: metrics.fontSize.m,
-    fontWeight: '600',
-  },
-  errorText: {
-    fontSize: metrics.fontSize.xs,
-    marginTop: 4,
-    marginLeft: 2,
-  },
-}); 
+export default HabitForm; 

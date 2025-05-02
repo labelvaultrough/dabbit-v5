@@ -137,19 +137,24 @@ export default function ManageHabitsScreen() {
       </View>
       
       {/* Habit Edit Modal */}
-      <Modal
-        visible={showModal}
-        animationType="slide"
-        transparent
-        onRequestClose={handleCloseModal}
-      >
-        <View style={styles.modalContainer}>
-          <View 
-            style={[
-              styles.modalContent, 
-              { backgroundColor: colors.background }
-            ]}
-          >
+      {showModal && (
+        <View style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000,
+        }}>
+          <View style={{
+            width: 320,
+            maxHeight: 600,
+            backgroundColor: 'white',
+            borderRadius: 16,
+          }}>
             <HabitForm
               habit={habitToEdit}
               onClose={handleCloseModal}
@@ -157,7 +162,7 @@ export default function ManageHabitsScreen() {
             />
           </View>
         </View>
-      </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -256,15 +261,5 @@ const styles = StyleSheet.create({
     fontSize: metrics.fontSize.m,
     marginTop: metrics.spacing.s,
     textAlign: 'center',
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    width: '100%',
-    height: '100%',
   },
 }); 

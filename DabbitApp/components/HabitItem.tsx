@@ -5,6 +5,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { Habit } from '@/types/habit';
 import { useHabits } from '@/context/HabitContext';
 import { format } from 'date-fns';
+import { getHabitBackgroundColor, getActionButtonColor } from '@/utils/colorUtils';
 
 // Get time bucket emoji based on the time
 export const getTimeBucketEmoji = (timeString: string | undefined) => {
@@ -56,7 +57,7 @@ const formatTime = (timeString: string | undefined): string => {
  * HabitItem component that displays a habit card with name, time, duration, and completion status
  */
 export const HabitItem = ({ habit, date, onPress, onEdit, onDelete }: HabitItemProps) => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { 
     getHabitCompletionStatus, 
     getHabitStreak, 
@@ -84,24 +85,9 @@ export const HabitItem = ({ habit, date, onPress, onEdit, onDelete }: HabitItemP
     }).start();
   }, [isCompleted]);
   
-  // Function to get the background color based on habit name or category
+  // Function to get the background color based on habit category
   const getBackgroundColor = () => {
-    if (habit.name.toLowerCase().includes('language')) {
-      return '#EBE6FF'; // Light purple for language learning
-    } else if (habit.name.toLowerCase().includes('doctor') || habit.name.toLowerCase().includes('appointment')) {
-      return '#E6FFF0'; // Light green for doctor/medical
-    } else if (habit.name.toLowerCase().includes('coffee') || habit.name.toLowerCase().includes('friend')) {
-      return '#FFE6EB'; // Light pink for social activities
-    } else if (habit.name.toLowerCase().includes('exercise') || habit.name.toLowerCase().includes('workout')) {
-      return '#FFF1E6'; // Light orange for exercise
-    } else if (habit.name.toLowerCase().includes('read') || habit.name.toLowerCase().includes('book')) {
-      return '#E6F0FF'; // Light blue for reading
-    } else if (habit.name.toLowerCase().includes('meditate')) {
-      return '#F0E6FF'; // Light purple for meditation
-    }
-    
-    // Default colors
-    return isCompleted ? '#F5F5F5' : '#E6F0FF';
+    return getHabitBackgroundColor(habit.category, isDark, isCompleted);
   };
   
   // Handle action button press
@@ -158,7 +144,7 @@ export const HabitItem = ({ habit, date, onPress, onEdit, onDelete }: HabitItemP
       if (isCompleted) {
         return (
           <TouchableOpacity 
-            style={[styles.actionButton, { backgroundColor: '#4CAF50' }]}
+            style={[styles.actionButton, { backgroundColor: getActionButtonColor(habit.category, isDark) }]}
             onPress={handleActionButtonPress}
           >
             <Feather name="check" size={24} color="white" />
@@ -170,7 +156,7 @@ export const HabitItem = ({ habit, date, onPress, onEdit, onDelete }: HabitItemP
       return (
         <View style={styles.timerContainer}>
           <TouchableOpacity 
-            style={[styles.actionButton, { backgroundColor: isTimerActive ? '#4CAF50' : '#2D3748' }]}
+            style={[styles.actionButton, { backgroundColor: isTimerActive ? getActionButtonColor(habit.category, isDark) : '#2D3748' }]}
             onPress={handleActionButtonPress}
           >
             <Feather name={isTimerActive ? "pause" : "play"} size={24} color="white" />
@@ -182,7 +168,7 @@ export const HabitItem = ({ habit, date, onPress, onEdit, onDelete }: HabitItemP
               <View 
                 style={[
                   styles.progressFill, 
-                  { width: `${progress}%`, backgroundColor: '#4CAF50' }
+                  { width: `${progress}%`, backgroundColor: getActionButtonColor(habit.category, isDark) }
                 ]} 
               />
             </View>
@@ -201,7 +187,7 @@ export const HabitItem = ({ habit, date, onPress, onEdit, onDelete }: HabitItemP
           <Feather 
             name={isCompleted ? "check-circle" : "circle"} 
             size={32} 
-            color={isCompleted ? '#4CAF50' : colors.border} 
+            color={isCompleted ? getActionButtonColor(habit.category, isDark) : colors.border} 
           />
         </TouchableOpacity>
       </Animated.View>
