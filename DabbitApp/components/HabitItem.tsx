@@ -5,7 +5,8 @@ import { useTheme } from '@/context/ThemeContext';
 import { Habit } from '@/types/habit';
 import { useHabits } from '@/context/HabitContext';
 import { format } from 'date-fns';
-import { getHabitBackgroundColor, getActionButtonColor } from '@/utils/colorUtils';
+import { getHabitBackgroundColor, getActionButtonColor, getLightPastelShade } from '@/utils/colorUtils';
+import { Colors } from '@/constants/Colors';
 
 // Get time bucket emoji based on the time
 export const getTimeBucketEmoji = (timeString: string | undefined) => {
@@ -44,7 +45,7 @@ type HabitItemProps = {
 };
 
 // Format time to 12-hour format
-const formatTime = (timeString: string | undefined): string => {
+export const formatTime = (timeString: string | undefined): string => {
   if (!timeString) return '';
   
   const [hours, minutes] = timeString.split(':').map(Number);
@@ -65,7 +66,8 @@ export const HabitItem = ({ habit, date, onPress, onEdit, onDelete }: HabitItemP
     startHabitTimer,
     pauseHabitTimer,
     resumeHabitTimer,
-    stopHabitTimer
+    stopHabitTimer,
+    categories
   } = useHabits();
   
   const [animatedValue] = useState(new Animated.Value(0));
@@ -85,9 +87,26 @@ export const HabitItem = ({ habit, date, onPress, onEdit, onDelete }: HabitItemP
     }).start();
   }, [isCompleted]);
   
+  // Function to get the category color
+  const getCategoryColor = () => {
+    // Find the category of this habit
+    const category = categories.find(cat => cat.id === habit.category);
+    if (!category) return colors.primary;
+    
+    // Get the color from Colors based on category.color (e.g., "green", "blue", etc.)
+    const categoryColors = isDark ? Colors.dark.categories : Colors.light.categories;
+    const colorName = category.color as keyof typeof categoryColors;
+    
+    // Ensure we return a string color value (not an array for gradients)
+    const colorValue = categoryColors[colorName];
+    return typeof colorValue === 'string' ? colorValue : colors.primary;
+  };
+  
   // Function to get the background color based on habit category
   const getBackgroundColor = () => {
-    return getHabitBackgroundColor(habit.category, isDark, isCompleted);
+    // Always use the category color with pastel shade, even for completed items
+    const categoryColor = getCategoryColor();
+    return getLightPastelShade(categoryColor, 0.15);
   };
   
   // Handle action button press
@@ -112,39 +131,51 @@ export const HabitItem = ({ habit, date, onPress, onEdit, onDelete }: HabitItemP
     }
   };
   
-  // Get icon based on habit name
+  // Get icon based on habit
   const getHabitIcon = () => {
     // Use the provided icon if available
     if (habit.icon) {
-      return { name: habit.icon, color: '#4A5568' };
+      return habit.icon;
     }
     
     // Otherwise determine based on name
     if (habit.name.toLowerCase().includes('language')) {
-      return { name: 'globe', color: '#5D5FEF' }; 
+      return 'globe';
     } else if (habit.name.toLowerCase().includes('doctor') || habit.name.toLowerCase().includes('appointment')) {
-      return { name: 'user', color: '#4CAF50' }; 
+      return 'user';
     } else if (habit.name.toLowerCase().includes('coffee')) {
-      return { name: 'coffee', color: '#E91E63' };
-    } else if (habit.name.toLowerCase().includes('exercise') || habit.name.toLowerCase().includes('workout')) {
-      return { name: 'activity', color: '#FF6B6B' };
+      return 'coffee';
+    } else if (habit.name.toLowerCase().includes('exercise') || habit.name.toLowerCase().includes('workout') || habit.name.toLowerCase().includes('run')) {
+      return 'activity';
     } else if (habit.name.toLowerCase().includes('read') || habit.name.toLowerCase().includes('book')) {
-      return { name: 'book', color: '#3B82F6' };
+      return 'book';
     } else if (habit.name.toLowerCase().includes('meditate')) {
-      return { name: 'moon', color: '#8B5CF6' };
+      return 'moon';
+    } else if (habit.name.toLowerCase().includes('code') || habit.name.toLowerCase().includes('coding')) {
+      return 'code';
+    } else if (habit.name.toLowerCase().includes('cook') || habit.name.toLowerCase().includes('dinner')) {
+      return 'coffee'; // Using coffee icon for cooking as in screenshot
+    } else if (habit.name.toLowerCase().includes('yoga')) {
+      return 'sun';
+    } else if (habit.name.toLowerCase().includes('water') || habit.name.toLowerCase().includes('drink')) {
+      return 'droplet';
+    } else if (habit.name.toLowerCase().includes('meeting') || habit.name.toLowerCase().includes('team')) {
+      return 'users';
     }
     
-    return { name: 'check', color: '#3F51B5' };
+    return 'check';
   };
   
   // Function to determine the action button type
   const renderActionButton = () => {
     // For habits with duration, show timer controls
+    const categoryColor = getCategoryColor();
+    
     if (habit.duration) {
       if (isCompleted) {
         return (
           <TouchableOpacity 
-            style={[styles.actionButton, { backgroundColor: getActionButtonColor(habit.category, isDark) }]}
+            style={[styles.actionButton, { backgroundColor: categoryColor }]}
             onPress={handleActionButtonPress}
           >
             <Feather name="check" size={24} color="white" />
@@ -156,7 +187,7 @@ export const HabitItem = ({ habit, date, onPress, onEdit, onDelete }: HabitItemP
       return (
         <View style={styles.timerContainer}>
           <TouchableOpacity 
-            style={[styles.actionButton, { backgroundColor: isTimerActive ? getActionButtonColor(habit.category, isDark) : '#2D3748' }]}
+            style={[styles.actionButton, { backgroundColor: isTimerActive ? categoryColor : '#2D3748' }]}
             onPress={handleActionButtonPress}
           >
             <Feather name={isTimerActive ? "pause" : "play"} size={24} color="white" />
@@ -168,7 +199,7 @@ export const HabitItem = ({ habit, date, onPress, onEdit, onDelete }: HabitItemP
               <View 
                 style={[
                   styles.progressFill, 
-                  { width: `${progress}%`, backgroundColor: getActionButtonColor(habit.category, isDark) }
+                  { width: `${progress}%`, backgroundColor: categoryColor }
                 ]} 
               />
             </View>
@@ -187,7 +218,7 @@ export const HabitItem = ({ habit, date, onPress, onEdit, onDelete }: HabitItemP
           <Feather 
             name={isCompleted ? "check-circle" : "circle"} 
             size={32} 
-            color={isCompleted ? getActionButtonColor(habit.category, isDark) : colors.border} 
+            color={isCompleted ? getCategoryColor() : colors.border} 
           />
         </TouchableOpacity>
       </Animated.View>
@@ -208,13 +239,17 @@ export const HabitItem = ({ habit, date, onPress, onEdit, onDelete }: HabitItemP
   };
   
   // Get icon for the habit
-  const iconInfo = getHabitIcon();
+  const iconName = getHabitIcon();
   
   return (
     <View style={[styles.container, { backgroundColor: getBackgroundColor() }]}>
       <View style={styles.leftSection}>
         <View style={[styles.iconContainer, { backgroundColor: 'white' }]}>
-          <Feather name={iconInfo.name as any} size={24} color={iconInfo.color} />
+          <Feather 
+            name={iconName as any} 
+            size={24} 
+            color={getCategoryColor()} 
+          />
         </View>
         
         <View style={styles.textContainer}>
@@ -265,6 +300,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    marginRight: 16,
   },
   iconContainer: {
     width: 56,
@@ -276,6 +312,7 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
+    maxWidth: '70%',
   },
   title: {
     fontSize: 20,
@@ -331,7 +368,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   rightSection: {
-    marginLeft: 8,
+    width: 64,
     justifyContent: 'center',
     alignItems: 'center',
   },

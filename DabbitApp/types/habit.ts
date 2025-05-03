@@ -25,6 +25,7 @@ export interface Habit {
   reminderEnabled?: boolean; // Whether this specific habit should show reminders
   icon?: string; // Icon for the habit (Feather icon name)
   duration?: number; // Duration in minutes
+  endDate?: string; // End date for the habit (YYYY-MM-DD format)
   archived: boolean;
   createdAt: string;
   updatedAt: string;

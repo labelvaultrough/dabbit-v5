@@ -6,6 +6,7 @@ import { useHabits } from '@/context/HabitContext';
 import { metrics } from '@/constants/metrics';
 import { Habit } from '@/types/habit';
 import Svg, { Circle, G } from 'react-native-svg';
+import { format } from 'date-fns';
 
 // Safe haptic feedback function (no dependency on native modules)
 const triggerHaptic = (type: string) => {
@@ -273,28 +274,38 @@ export const HabitItem = ({ habit, date, onPress, onEdit, onDelete }: HabitItemP
               <Text style={[styles.title, { color: colors.text }]}>{habit.name}</Text>
             </View>
             
-            {/* Duration and progress info */}
-            {habit.duration && (
-              <View style={styles.detailsContainer}>
-                {/* Show duration indicator */}
+            {/* Details and info section */}
+            <View style={styles.detailsContainer}>
+              {/* Show duration indicator */}
+              {habit.duration && (
                 <View style={styles.durationContainer}>
                   <Feather name="clock" size={14} color={colors.textSecondary} />
                   <Text style={[styles.durationText, { color: colors.textSecondary }]}>
                     {formatTimerDisplay() || `${habit.duration} min`}
                   </Text>
                 </View>
-                
-                {/* Show history stats if available */}
-                {historyStats.attempts > 0 && (
-                  <View style={styles.historyContainer}>
-                    <Feather name="bar-chart-2" size={14} color={colors.textSecondary} />
-                    <Text style={[styles.historyText, { color: colors.textSecondary }]}>
-                      {historyStats.completions}/{historyStats.attempts} completed
-                    </Text>
-                  </View>
-                )}
-              </View>
-            )}
+              )}
+              
+              {/* Show end date if available */}
+              {habit.endDate && (
+                <View style={styles.endDateContainer}>
+                  <Feather name="calendar" size={14} color={colors.textSecondary} />
+                  <Text style={[styles.endDateText, { color: colors.textSecondary }]}>
+                    Ends {format(new Date(habit.endDate), 'MMM d, yyyy')}
+                  </Text>
+                </View>
+              )}
+              
+              {/* Show history stats if available */}
+              {historyStats.attempts > 0 && (
+                <View style={styles.historyContainer}>
+                  <Feather name="bar-chart-2" size={14} color={colors.textSecondary} />
+                  <Text style={[styles.historyText, { color: colors.textSecondary }]}>
+                    {historyStats.completions}/{historyStats.attempts} completed
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
           
           <View style={styles.rightContainer}>
@@ -424,6 +435,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   historyText: {
+    fontSize: metrics.fontSize.xs,
+    marginLeft: metrics.spacing.xs,
+  },
+  endDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  endDateText: {
     fontSize: metrics.fontSize.xs,
     marginLeft: metrics.spacing.xs,
   },

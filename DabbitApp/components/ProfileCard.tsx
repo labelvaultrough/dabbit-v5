@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { metrics } from '@/constants/metrics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,6 +10,7 @@ type ProfileCardProps = {
   streak?: number;
   habitCount?: number;
   photoUrl?: string;
+  onPhotoPress?: () => void;
 };
 
 export const ProfileCard = ({
@@ -17,6 +18,7 @@ export const ProfileCard = ({
   streak = 0,
   habitCount = 0,
   photoUrl,
+  onPhotoPress,
 }: ProfileCardProps) => {
   const { colors } = useTheme();
   
@@ -28,15 +30,29 @@ export const ProfileCard = ({
       style={styles.container}
     >
       <View style={styles.content}>
-        <View style={styles.photoContainer}>
+        <TouchableOpacity 
+          style={styles.photoContainer}
+          onPress={onPhotoPress}
+          activeOpacity={0.8}
+        >
           {photoUrl ? (
-            <Image source={{ uri: photoUrl }} style={styles.photo} />
+            <View style={styles.photoWrapper}>
+              <Image source={{ uri: photoUrl }} style={styles.photo} />
+              <View style={styles.editIconContainer}>
+                <Feather name="edit-2" size={14} color="#FFFFFF" />
+              </View>
+            </View>
           ) : (
-            <View style={[styles.photoPlaceholder, { backgroundColor: 'rgba(255, 255, 255, 0.3)' }]}>
-              <Feather name="user" size={40} color="#FFFFFF" />
+            <View style={styles.photoWrapper}>
+              <View style={[styles.photoPlaceholder, { backgroundColor: 'rgba(255, 255, 255, 0.3)' }]}>
+                <Feather name="user" size={40} color="#FFFFFF" />
+              </View>
+              <View style={styles.editIconContainer}>
+                <Feather name="edit-2" size={14} color="#FFFFFF" />
+              </View>
             </View>
           )}
-        </View>
+        </TouchableOpacity>
         
         <View style={styles.infoContainer}>
           <Text style={styles.name}>{name}</Text>
@@ -80,6 +96,9 @@ const styles = StyleSheet.create({
   photoContainer: {
     marginRight: metrics.spacing.l,
   },
+  photoWrapper: {
+    position: 'relative',
+  },
   photo: {
     width: 80,
     height: 80,
@@ -94,6 +113,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  editIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.5)',
   },
   infoContainer: {

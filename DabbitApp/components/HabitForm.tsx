@@ -9,6 +9,7 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
+import { format } from 'date-fns';
 import { useTheme } from '@/context/ThemeContext';
 import { useHabits } from '@/context/HabitContext';
 import { metrics } from '@/constants/metrics';
@@ -16,6 +17,7 @@ import { Feather } from '@expo/vector-icons';
 import { Habit, FrequencyType, Frequency } from '@/types/habit';
 import { Dropdown } from './Dropdown';
 import { TimePickerField } from './TimePickerField';
+import { DatePickerField } from './DatePickerField';
 import { IconSelector } from './IconSelector';
 import { DurationSelector } from './DurationSelector';
 
@@ -35,6 +37,7 @@ export const HabitForm = ({ habit, onClose, onSave }: HabitFormProps) => {
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>(categories[0]?.id);
   const [selectedTime, setSelectedTime] = useState<Date | null>(null);
+  const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
   const [reminderEnabled, setReminderEnabled] = useState<boolean>(true);
   const [selectedIcon, setSelectedIcon] = useState<string | undefined>(undefined);
   const [selectedDuration, setSelectedDuration] = useState<number | undefined>(undefined);
@@ -56,6 +59,10 @@ export const HabitForm = ({ habit, onClose, onSave }: HabitFormProps) => {
         timeDate.setHours(hours);
         timeDate.setMinutes(minutes);
         setSelectedTime(timeDate);
+      }
+      
+      if (habit.endDate) {
+        setSelectedEndDate(new Date(habit.endDate));
       }
       
       setReminderEnabled(habit.reminderEnabled !== false);
@@ -88,6 +95,12 @@ export const HabitForm = ({ habit, onClose, onSave }: HabitFormProps) => {
       const minutes = selectedTime.getMinutes().toString().padStart(2, '0');
       formattedTime = `${hours}:${minutes}`;
     }
+    
+    // Format end date if set
+    let formattedEndDate: string | undefined;
+    if (selectedEndDate) {
+      formattedEndDate = format(selectedEndDate, 'yyyy-MM-dd');
+    }
 
     // Prepare frequency data
     const frequency: Frequency = {
@@ -103,6 +116,7 @@ export const HabitForm = ({ habit, onClose, onSave }: HabitFormProps) => {
         frequency,
         category: selectedCategory,
         time: formattedTime,
+        endDate: formattedEndDate,
         reminderEnabled,
         icon: selectedIcon,
         duration: selectedDuration,
@@ -114,6 +128,7 @@ export const HabitForm = ({ habit, onClose, onSave }: HabitFormProps) => {
         frequency,
         category: selectedCategory,
         time: formattedTime,
+        endDate: formattedEndDate,
         reminderEnabled,
         icon: selectedIcon,
         duration: selectedDuration,
@@ -357,24 +372,46 @@ export const HabitForm = ({ habit, onClose, onSave }: HabitFormProps) => {
           </View>
         </View>
 
-        {/* Category */}
-        <View style={{marginBottom: styles.spacing}}>
-          <Text style={styles.labelText}>Category</Text>
-          <View style={{
-            height: styles.inputHeight,
-            borderWidth: 1,
-            borderColor: styles.controlBorderColor,
-            borderRadius: styles.borderRadius,
-            overflow: 'hidden'
-          }}>
-            <Dropdown
-              label=""
-              items={categoryItems}
-              selectedItemId={selectedCategory}
-              onSelect={(id) => setSelectedCategory(id || categories[0]?.id)}
-            />
+        {/* Category and End Date in single row */}
+        <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: styles.spacing}}>
+          {/* Category */}
+          <View style={{width: '48%'}}>
+            <Text style={styles.labelText}>Category</Text>
+            <View style={{
+              height: styles.inputHeight,
+              borderWidth: 1,
+              borderColor: styles.controlBorderColor,
+              borderRadius: styles.borderRadius,
+              overflow: 'hidden'
+            }}>
+              <Dropdown
+                label=""
+                items={categoryItems}
+                selectedItemId={selectedCategory}
+                onSelect={(id) => setSelectedCategory(id || categories[0]?.id)}
+              />
+            </View>
+            {errors.category && <Text style={styles.errorText}>{errors.category}</Text>}
           </View>
-          {errors.category && <Text style={styles.errorText}>{errors.category}</Text>}
+          
+          {/* End Date */}
+          <View style={{width: '48%'}}>
+            <Text style={styles.labelText}>End Date</Text>
+            <View style={{
+              height: styles.inputHeight,
+              borderWidth: 1,
+              borderColor: styles.controlBorderColor,
+              borderRadius: styles.borderRadius,
+              overflow: 'hidden'
+            }}>
+              <DatePickerField
+                value={selectedEndDate}
+                onChange={setSelectedEndDate}
+                placeholder="Optional"
+                minimumDate={new Date()}
+              />
+            </View>
+          </View>
         </View>
 
         {/* Submit button */}

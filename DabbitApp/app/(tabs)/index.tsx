@@ -107,7 +107,14 @@ const Header = ({
 
 export default function HomeScreen() {
   const { colors } = useTheme();
-  const { habits, toggleHabitCompletion, deleteHabit, username, getDailyProgress } = useHabits();
+  const { 
+    habits, 
+    toggleHabitCompletion, 
+    deleteHabit, 
+    username, 
+    getDailyProgress, 
+    getHabitCompletionStatus 
+  } = useHabits();
   const insets = useSafeAreaInsets();
   
   const [showModal, setShowModal] = useState(false);
@@ -137,6 +144,23 @@ export default function HomeScreen() {
         const bucket = getTimeBucketEmoji(habit.time);
         return bucket && bucket.label === selectedBucket;
       });
+    
+  // Sort habits by completion status (incomplete first, then completed)
+  filteredHabits.sort((a, b) => {
+    const aCompleted = getHabitCompletionStatus(a.id, todayFormatted);
+    const bCompleted = getHabitCompletionStatus(b.id, todayFormatted);
+    
+    // Sort by completion status (non-completed first)
+    if (aCompleted && !bCompleted) return 1;
+    if (!aCompleted && bCompleted) return -1;
+    
+    // For habits with equal completion status, sort by time
+    if (a.time && b.time) {
+      return a.time.localeCompare(b.time);
+    }
+    
+    return 0;
+  });
   
   const handleAddHabit = () => {
     setSelectedHabit(null);

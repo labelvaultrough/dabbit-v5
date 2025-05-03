@@ -109,16 +109,25 @@ export default function SettingsScreen() {
     );
   };
   
+  const selectProfilePicture = () => {
+    Alert.alert(
+      'Profile Picture',
+      'This feature will allow you to add a profile picture. Coming in the next update!',
+      [{ text: 'OK' }]
+    );
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header title="Settings" />
+      {/* Removed the "Settings" header as requested */}
       
-      <ScrollView style={styles.content}>
+      <ScrollView style={[styles.content, { paddingTop: 60 }]}>
         {/* Profile Card */}
         <ProfileCard 
           name={username}
           streak={currentStreak}
           habitCount={activeHabitsCount}
+          onPhotoPress={selectProfilePicture}
         />
         
         <View style={styles.section}>
