@@ -88,6 +88,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="rewards"
+        options={{
+          title: 'Dabbit Coins',
+          tabBarIcon: ({ color, focused }) => <TabBarIcon name="dollar-sign" color={color} isActive={focused} />,
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
