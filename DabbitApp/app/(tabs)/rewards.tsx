@@ -8,7 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GradientButton } from '@/components/GradientButton';
 import { useTheme } from '@/context/ThemeContext';
 import { metrics } from '@/constants/metrics';
-import { MOCK_DISCOUNTS, MOCK_EVENTS } from '@/constants/mockEvents';
+import { MOCK_EVENTS, MOCK_SUBSCRIPTIONS, MOCK_GOODIES } from '@/constants/mockEvents';
 import { Event } from '@/types/points';
 import { format, parseISO } from 'date-fns';
 import DabbitCoinsCard from '@/components/PointsInsightsCard';
@@ -51,51 +51,6 @@ export default function RewardsScreen() {
         {/* Dabbit Coins Card */}
         <DabbitCoinsCard currentCoins={MOCK_COINS} />
         
-        {/* Discounts Section */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Available Discounts
-          </Text>
-          
-          {/* Horizontal scrolling container with extra right padding */}
-          <View style={styles.discountScrollContainer}>
-            <ScrollView 
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingLeft: metrics.spacing.l }}
-              alwaysBounceHorizontal={true}
-              overScrollMode="always"
-            >
-              {MOCK_DISCOUNTS.map((discount, index) => (
-                <View
-                  key={discount.id}
-                  style={[
-                    styles.discountWrapper,
-                    // Add extra padding to last item
-                    index === MOCK_DISCOUNTS.length - 1 ? { marginRight: metrics.spacing.xxl * 2 } : {}
-                  ]}
-                >
-                  <LinearGradient
-                    colors={['#FF6B6B', '#FF3980']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.discountCard}
-                  >
-                    <Text style={styles.discountTitle}>{discount.name}</Text>
-                    <View style={styles.discountDetails}>
-                      <View style={styles.discountCoins}>
-                        <Feather name="dollar-sign" size={16} color="#FBBF24" />
-                        <Text style={styles.discountCoinsText}>{discount.pointsCost} DC</Text>
-                      </View>
-                      <Text style={styles.discountValue}>₹{discount.discountAmount}</Text>
-                    </View>
-                  </LinearGradient>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-        
         {/* Experiences Section - Changed from "Events" */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -135,12 +90,20 @@ export default function RewardsScreen() {
                   </View>
                   
                   <View style={styles.experiencePricing}>
-                    <Text style={[styles.experienceOriginalPrice, { color: colors.textSecondary }]}>
-                      ₹{event.price}
-                    </Text>
-                    <Text style={[styles.experienceDiscountedPrice, { color: colors.text }]}>
-                      ₹{event.discountedPrice}
-                    </Text>
+                    <View>
+                      <View style={styles.priceInfo}>
+                        <Text style={[styles.experienceOriginalPrice, { color: colors.textSecondary }]}>
+                          ₹{event.price}
+                        </Text>
+                        <Text style={[styles.experienceDiscountedPrice, { color: colors.text }]}>
+                          ₹{event.discountedPrice}
+                        </Text>
+                      </View>
+                      <View style={styles.coinsTag}>
+                        <Feather name="dollar-sign" size={12} color="#FBBF24" />
+                        <Text style={styles.coinsTagText}>{300} DC</Text>
+                      </View>
+                    </View>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -148,61 +111,145 @@ export default function RewardsScreen() {
           </View>
         </View>
         
-        {/* Subscriptions Section - New */}
+        {/* Subscriptions Section */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
             Subscriptions
           </Text>
           
-          <View style={styles.comingSoonContainer}>
-            <Feather name="clock" size={32} color={colors.textSecondary} />
-            <Text style={[styles.comingSoonText, { color: colors.textSecondary }]}>
-              Premium app subscriptions coming soon
-            </Text>
+          <View style={styles.subscriptionsGrid}>
+            {MOCK_SUBSCRIPTIONS && MOCK_SUBSCRIPTIONS.length > 0 ? (
+              MOCK_SUBSCRIPTIONS.map((subscription) => (
+                <TouchableOpacity 
+                  key={subscription.id} 
+                  style={[styles.itemCard, { width: itemWidth, backgroundColor: colors.surface }]}
+                  onPress={() => router.push({
+                    pathname: "/subscription-details/[id]",
+                    params: { id: subscription.id }
+                  })}
+                >
+                  <View style={[styles.cardImageContainer, { backgroundColor: '#e0e0e0' }]}>
+                    <Image 
+                      source={{ uri: subscription.imageUrl }}
+                      style={styles.cardImage}
+                      resizeMode="cover"
+                      onError={(e) => console.log('Image failed to load:', e.nativeEvent.error)}
+                    />
+                    <LinearGradient
+                      colors={['rgba(0,0,0,0.5)', 'transparent']}
+                      style={styles.imageGradient}
+                      start={{x: 0, y: 0}}
+                      end={{x: 0, y: 0.6}}
+                    />
+                  </View>
+                  
+                  <View style={styles.cardContentContainer}>
+                    <Text style={[styles.itemTitle, { color: colors.text }]} numberOfLines={2}>
+                      {subscription.name}
+                    </Text>
+                    
+                    <Text style={[styles.itemDescription, { color: colors.textSecondary }]} numberOfLines={2}>
+                      {subscription.description}
+                    </Text>
+                    
+                    <View>
+                      <View style={styles.priceInfo}>
+                        <Text style={[styles.originalPrice, { color: colors.textSecondary }]}>
+                          ₹{subscription.originalPrice}
+                        </Text>
+                        <Text style={[styles.discountedPrice, { color: colors.text }]}>
+                          ₹{subscription.discountedPrice}
+                        </Text>
+                      </View>
+                      <View style={[styles.coinsTag, { marginTop: metrics.spacing.xs }]}>
+                        <Feather name="dollar-sign" size={12} color="#FBBF24" />
+                        <Text style={styles.coinsTagText}>{subscription.pointsCost} DC</Text>
+                      </View>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={styles.comingSoonContainer}>
+                <Feather name="clock" size={32} color={colors.textSecondary} />
+                <Text style={[styles.comingSoonText, { color: colors.textSecondary }]}>
+                  Premium app subscriptions coming soon
+                </Text>
+              </View>
+            )}
           </View>
         </View>
         
-        {/* Merchandise Section - New */}
+        {/* Goodies Section */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Wellness Essentials
+            Goodies
           </Text>
           
-          <View style={styles.comingSoonContainer}>
-            <Feather name="package" size={32} color={colors.textSecondary} />
-            <Text style={[styles.comingSoonText, { color: colors.textSecondary }]}>
-              Redeem coins for wellness products soon
-            </Text>
+          <View style={styles.goodiesGrid}>
+            {MOCK_GOODIES && MOCK_GOODIES.length > 0 ? (
+              MOCK_GOODIES.map((goodie) => (
+                <TouchableOpacity 
+                  key={goodie.id} 
+                  style={[styles.itemCard, { width: itemWidth, backgroundColor: colors.surface }]}
+                  onPress={() => router.push({
+                    pathname: "/goodie-details/[id]",
+                    params: { id: goodie.id }
+                  })}
+                >
+                  <View style={[styles.cardImageContainer, { backgroundColor: '#e0e0e0' }]}>
+                    <Image 
+                      source={{ uri: goodie.imageUrl }}
+                      style={styles.cardImage}
+                      resizeMode="cover"
+                      onError={(e) => console.log('Image failed to load:', e.nativeEvent.error)}
+                    />
+                    <LinearGradient
+                      colors={['rgba(0,0,0,0.5)', 'transparent']}
+                      style={styles.imageGradient}
+                      start={{x: 0, y: 0}}
+                      end={{x: 0, y: 0.6}}
+                    />
+                  </View>
+                  
+                  <View style={styles.cardContentContainer}>
+                    <Text style={[styles.itemTitle, { color: colors.text }]} numberOfLines={2}>
+                      {goodie.name}
+                    </Text>
+                    
+                    <Text style={[styles.itemDescription, { color: colors.textSecondary }]} numberOfLines={2}>
+                      {goodie.description}
+                    </Text>
+                    
+                    <View>
+                      <View style={styles.priceInfo}>
+                        <Text style={[styles.originalPrice, { color: colors.textSecondary }]}>
+                          ₹{goodie.originalPrice}
+                        </Text>
+                        <Text style={[styles.discountedPrice, { color: colors.text }]}>
+                          ₹{goodie.discountedPrice}
+                        </Text>
+                      </View>
+                      <View style={[styles.coinsTag, { marginTop: metrics.spacing.xs }]}>
+                        <Feather name="dollar-sign" size={12} color="#FBBF24" />
+                        <Text style={styles.coinsTagText}>{goodie.pointsCost} DC</Text>
+                      </View>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={styles.comingSoonContainer}>
+                <Feather name="package" size={32} color={colors.textSecondary} />
+                <Text style={[styles.comingSoonText, { color: colors.textSecondary }]}>
+                  Redeem coins for wellness products soon
+                </Text>
+              </View>
+            )}
           </View>
         </View>
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-type DiscountCardProps = {
-  title: string;
-  coins: number;
-  value: number;
-};
-
-function DiscountCard({ title, coins, value }: DiscountCardProps) {
-  return (
-    <LinearGradient
-      colors={['#FF6B6B', '#FF3980']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.discountCard}
-    >
-      <Text style={styles.discountTitle}>{title}</Text>
-      <View style={styles.discountDetails}>
-        <View style={styles.discountCoins}>
-          <Feather name="dollar-sign" size={16} color="#FBBF24" />
-          <Text style={styles.discountCoinsText}>{coins} DC</Text>
-        </View>
-        <Text style={styles.discountValue}>₹{value}</Text>
-      </View>
-    </LinearGradient>
   );
 }
 
@@ -249,60 +296,6 @@ const styles = StyleSheet.create({
     marginHorizontal: metrics.spacing.l,
     marginBottom: metrics.spacing.m,
   },
-  discountsRow: {
-    paddingHorizontal: metrics.spacing.l,
-    paddingRight: metrics.spacing.xxl,
-  },
-  discountScrollContainer: {
-    marginBottom: metrics.spacing.m,
-    // Add a small indicator that there are more cards
-    borderRightWidth: 1,
-    borderRightColor: 'rgba(0,0,0,0.05)',
-    marginRight: metrics.spacing.l,
-  },
-  discountWrapper: {
-    marginRight: metrics.spacing.m,
-    // Add subtle shadow to make cards stand out
-    shadowColor: '#000',
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  discountCard: {
-    width: 180,
-    borderRadius: metrics.borderRadius.large,
-    padding: metrics.spacing.m,
-  },
-  discountTitle: {
-    color: '#FFFFFF',
-    fontSize: metrics.fontSize.m,
-    fontWeight: '600',
-    marginBottom: metrics.spacing.s,
-  },
-  discountDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  discountCoins: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingVertical: metrics.spacing.xs,
-    paddingHorizontal: metrics.spacing.s,
-    borderRadius: metrics.borderRadius.medium,
-  },
-  discountCoinsText: {
-    color: '#FFFFFF',
-    fontWeight: '500',
-    marginLeft: metrics.spacing.xs,
-  },
-  discountValue: {
-    color: '#FFFFFF',
-    fontSize: metrics.fontSize.l,
-    fontWeight: '700',
-  },
   experiencesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -342,8 +335,6 @@ const styles = StyleSheet.create({
     fontSize: metrics.fontSize.xs,
   },
   experiencePricing: {
-    flexDirection: 'row',
-    alignItems: 'center',
     marginTop: metrics.spacing.xs,
   },
   experienceOriginalPrice: {
@@ -355,6 +346,85 @@ const styles = StyleSheet.create({
     fontSize: metrics.fontSize.m,
     fontWeight: '600',
   },
+  pricingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  priceInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  coinsTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(251, 191, 36, 0.1)',
+    paddingVertical: metrics.spacing.xs,
+    paddingHorizontal: metrics.spacing.s,
+    borderRadius: metrics.borderRadius.medium,
+    borderWidth: 1,
+    borderColor: 'rgba(251, 191, 36, 0.3)',
+  },
+  coinsTagText: {
+    color: '#FBBF24',
+    fontWeight: '600',
+    fontSize: metrics.fontSize.xs,
+    marginLeft: 2,
+  },
+  subscriptionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: metrics.spacing.l,
+  },
+  itemCard: {
+    borderRadius: metrics.borderRadius.large,
+    overflow: 'hidden',
+    marginBottom: metrics.spacing.m,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardImageContainer: {
+    position: 'relative',
+    width: '100%',
+    height: 120,
+  },
+  cardImage: {
+    width: '100%',
+    height: '100%',
+  },
+  imageGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 60,
+  },
+  cardContentContainer: {
+    padding: metrics.spacing.m,
+  },
+  itemTitle: {
+    fontSize: metrics.fontSize.m,
+    fontWeight: '600',
+    marginBottom: metrics.spacing.xs,
+  },
+  itemDescription: {
+    fontSize: metrics.fontSize.s,
+    marginBottom: metrics.spacing.m,
+    lineHeight: 18,
+  },
+  originalPrice: {
+    fontSize: metrics.fontSize.s,
+    textDecorationLine: 'line-through',
+    marginRight: metrics.spacing.s,
+  },
+  discountedPrice: {
+    fontSize: metrics.fontSize.m,
+    fontWeight: '600',
+  },
   comingSoonContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -362,10 +432,17 @@ const styles = StyleSheet.create({
     padding: metrics.spacing.xl,
     borderRadius: metrics.borderRadius.large,
     marginHorizontal: metrics.spacing.l,
+    width: '100%',
   },
   comingSoonText: {
     marginTop: metrics.spacing.m,
     textAlign: 'center',
     fontSize: metrics.fontSize.m,
+  },
+  goodiesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: metrics.spacing.l,
   },
 }); 

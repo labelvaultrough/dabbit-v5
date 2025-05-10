@@ -49,6 +49,8 @@ export default function RootLayout() {
             <NotificationProvider>
               <Stack>
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="event-details/[id]" options={{ headerShown: false }} />
+                <Stack.Screen name="manage-habits" options={{ title: 'Manage Habits' }} />
                 <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
               </Stack>
               <StatusBar style="auto" />

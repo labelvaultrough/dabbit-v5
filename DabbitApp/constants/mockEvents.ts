@@ -1,41 +1,8 @@
-import { Event, EventDiscount } from '@/types/points';
+import { Event, EventDiscount, Subscription, GoodieItem } from '@/types/points';
 import { generateId } from '@/utils/helpers';
 
 // Check if mock events exist
-console.log('Loading MOCK_EVENTS and MOCK_DISCOUNTS');
-
-export const MOCK_DISCOUNTS: EventDiscount[] = [
-  {
-    id: generateId(),
-    name: 'Premium Discount',
-    description: 'Get ₹300 off on selected premium events',
-    pointsCost: 300,
-    discountAmount: 300,
-    maxDiscountPercentage: 30,
-    category: 'workshop',
-    validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-  },
-  {
-    id: generateId(),
-    name: 'Standard Discount',
-    description: 'Get ₹200 off on selected events',
-    pointsCost: 200,
-    discountAmount: 200,
-    maxDiscountPercentage: 30,
-    category: 'comedy',
-    validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: generateId(),
-    name: 'Basic Discount',
-    description: 'Get ₹100 off on selected events',
-    pointsCost: 100,
-    discountAmount: 100,
-    maxDiscountPercentage: 30,
-    category: 'classes',
-    validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
+console.log('Loading mock data for rewards screen');
 
 export const MOCK_EVENTS: Event[] = [
   {
@@ -97,5 +64,79 @@ export const MOCK_EVENTS: Event[] = [
     discountedPrice: 2800,
     category: 'workshop',
     imageUrl: 'https://images.unsplash.com/photo-1588286840104-8957b019727f?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
+  },
+];
+
+// Mock subscriptions data
+export const MOCK_SUBSCRIPTIONS: Subscription[] = [
+  {
+    id: generateId(),
+    name: 'Headspace Premium',
+    description: 'Get unlimited access to guided meditations and mindfulness exercises',
+    duration: '1 month',
+    originalPrice: 899,
+    discountedPrice: 599,
+    pointsCost: 400,
+    imageUrl: 'https://images.unsplash.com/photo-1508672019048-805c876b67e2?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: generateId(),
+    name: 'Calm Premium',
+    description: 'Sleep stories, meditation guides, and relaxing music',
+    duration: '3 months',
+    originalPrice: 2499,
+    discountedPrice: 1999,
+    pointsCost: 800,
+    imageUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: generateId(),
+    name: 'Fitness Pro',
+    description: 'Home workout routines with expert trainers',
+    duration: '1 month',
+    originalPrice: 999,
+    discountedPrice: 699,
+    pointsCost: 450,
+    imageUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
+  },
+];
+
+// Mock goodies data
+export const MOCK_GOODIES: GoodieItem[] = [
+  {
+    id: generateId(),
+    name: 'Meditation Cushion',
+    description: 'Ergonomic cushion for comfortable meditation sessions',
+    originalPrice: 1499,
+    discountedPrice: 999,
+    pointsCost: 550,
+    imageUrl: 'https://images.unsplash.com/photo-1591228127791-8e2eaef098d3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: generateId(),
+    name: 'Eco Water Bottle',
+    description: 'Stainless steel, BPA-free water bottle',
+    originalPrice: 899,
+    discountedPrice: 599,
+    pointsCost: 300,
+    imageUrl: 'https://images.unsplash.com/photo-1523362628745-0c100150b504?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: generateId(),
+    name: 'Yoga Mat',
+    description: 'Non-slip, eco-friendly yoga mat for your practice',
+    originalPrice: 1299,
+    discountedPrice: 899,
+    pointsCost: 450,
+    imageUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: generateId(),
+    name: 'Sleep Mask',
+    description: 'Soft, contoured sleep mask for better rest',
+    originalPrice: 699,
+    discountedPrice: 399,
+    pointsCost: 200,
+    imageUrl: 'https://images.unsplash.com/photo-1574316071802-0d684efa7bf5?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
   },
 ]; 

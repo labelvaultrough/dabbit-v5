@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Modal } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,44 +8,31 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GradientButton } from '@/components/GradientButton';
 import { useTheme } from '@/context/ThemeContext';
 import { metrics } from '@/constants/metrics';
-import { MOCK_EVENTS } from '@/constants/mockEvents';
-import { format, parseISO } from 'date-fns';
-import { generateId } from '@/utils/helpers';
+import { MOCK_GOODIES } from '@/constants/mockEvents';
 
-// Mock coins value - in a real implementation this would come from a context
+// Mock coins value
 const MOCK_COINS = 450;
 
-// Fixed coin cost for experience redemptions
-const EXPERIENCE_COIN_COST = 300;
-
-export default function EventDetailsScreen() {
+export default function GoodieDetailsScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const eventId = Array.isArray(id) ? id[0] : id;
+  const goodieId = Array.isArray(id) ? id[0] : id;
   const [isConfirmationVisible, setIsConfirmationVisible] = useState(false);
   const [isSuccessVisible, setIsSuccessVisible] = useState(false);
-  const [redemptionCode, setRedemptionCode] = useState('');
+  const [orderNumber, setOrderNumber] = useState('');
   
-  // Find the event based on the id param
-  const event = MOCK_EVENTS.find(e => e.id === eventId) || MOCK_EVENTS[0];
+  // Find the goodie based on the id param
+  const goodie = MOCK_GOODIES.find(g => g.id === goodieId) || MOCK_GOODIES[0];
   
-  // Calculate savings amount
-  const savingsAmount = event.price - (event.discountedPrice || event.price);
-  
-  // Format the date
-  const formattedDate = event.date 
-    ? format(parseISO(event.date), 'EEEE, MMMM d, yyyy')
-    : '';
-  
-  const handleApplyDiscount = () => {
+  const handleRedeem = () => {
     setIsConfirmationVisible(true);
   };
   
   const handleConfirmRedemption = () => {
-    // Generate a random redemption code
-    const code = `DT${Math.floor(100000 + Math.random() * 900000)}`;
-    setRedemptionCode(code);
+    // Generate a random order number
+    const code = `ORD${Math.floor(100000 + Math.random() * 900000)}`;
+    setOrderNumber(code);
     
     // Close confirmation modal and show success
     setIsConfirmationVisible(false);
@@ -76,59 +63,34 @@ export default function EventDetailsScreen() {
         </TouchableOpacity>
         
         <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Event Details
+          Product Details
         </Text>
         
-        <View style={styles.pointsContainer}>
+        <View style={styles.coinsContainer}>
           <Feather 
             name="dollar-sign" 
             size={20} 
             color="#FBBF24" 
           />
-          <Text style={styles.pointsText}>
+          <Text style={styles.coinsText}>
             {MOCK_COINS} DC
           </Text>
         </View>
       </View>
       
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Event Image */}
+        {/* Goodie Image */}
         <Image 
-          source={{ uri: event.imageUrl }} 
-          style={styles.eventImage}
+          source={{ uri: goodie.imageUrl }} 
+          style={styles.goodieImage}
           resizeMode="cover"
         />
         
-        {/* Event Information */}
+        {/* Goodie Information */}
         <View style={styles.contentContainer}>
-          <Text style={[styles.eventTitle, { color: colors.text }]}>
-            {event.name}
+          <Text style={[styles.goodieTitle, { color: colors.text }]}>
+            {goodie.name}
           </Text>
-          
-          <View style={styles.detailsContainer}>
-            <View style={styles.detailRow}>
-              <Feather name="calendar" size={18} color={colors.textSecondary} />
-              <Text style={[styles.detailText, { color: colors.textSecondary }]}>
-                {formattedDate}
-              </Text>
-            </View>
-            
-            {event.time && (
-              <View style={styles.detailRow}>
-                <Feather name="clock" size={18} color={colors.textSecondary} />
-                <Text style={[styles.detailText, { color: colors.textSecondary }]}>
-                  {event.time}
-                </Text>
-              </View>
-            )}
-            
-            <View style={styles.detailRow}>
-              <Feather name="map-pin" size={18} color={colors.textSecondary} />
-              <Text style={[styles.detailText, { color: colors.textSecondary }]}>
-                {event.location.name}, {event.location.city}
-              </Text>
-            </View>
-          </View>
           
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           
@@ -140,10 +102,10 @@ export default function EventDetailsScreen() {
             
             <View style={styles.priceRow}>
               <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>
-                Original Price
+                Market Price
               </Text>
               <Text style={[styles.priceValue, { color: colors.text }]}>
-                ₹{event.price}
+                ₹{goodie.originalPrice}
               </Text>
             </View>
             
@@ -152,7 +114,7 @@ export default function EventDetailsScreen() {
                 Discount (Dabbit Coins)
               </Text>
               <Text style={[styles.discountValue, { color: colors.primary }]}>
-                - ₹{savingsAmount}
+                - ₹{goodie.originalPrice - goodie.discountedPrice}
               </Text>
             </View>
             
@@ -163,7 +125,7 @@ export default function EventDetailsScreen() {
                 Final Price
               </Text>
               <Text style={[styles.finalPriceValue, { color: colors.text }]}>
-                ₹{event.discountedPrice}
+                ₹{goodie.discountedPrice}
               </Text>
             </View>
           </View>
@@ -176,34 +138,47 @@ export default function EventDetailsScreen() {
               </Text>
             </View>
             <Text style={[styles.discountInfoText, { color: colors.textSecondary }]}>
-              You will use {EXPERIENCE_COIN_COST} Dabbit Coins to get ₹{savingsAmount} off.
+              You will use {goodie.pointsCost} Dabbit Coins to get ₹{goodie.originalPrice - goodie.discountedPrice} off.
               Your current balance is {MOCK_COINS} DC.
             </Text>
           </View>
           
-          <Text style={[styles.eventDescription, { color: colors.textSecondary }]}>
-            {event.description}
+          <Text style={[styles.goodieDescription, { color: colors.textSecondary }]}>
+            {goodie.description}
           </Text>
+          
+          <View style={[styles.shippingCard, { backgroundColor: colors.surface }]}>
+            <View style={styles.discountInfoHeader}>
+              <Feather name="truck" size={20} color={colors.secondary} />
+              <Text style={[styles.discountInfoTitle, { color: colors.secondary }]}>
+                Shipping Information
+              </Text>
+            </View>
+            <Text style={[styles.discountInfoText, { color: colors.textSecondary }]}>
+              Free shipping for all orders. Delivery within 5-7 business days.
+              Returns accepted within 7 days of delivery.
+            </Text>
+          </View>
           
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           
           <Text style={[styles.termsText, { color: colors.textSecondary }]}>
             * This discount is valid for 30 days from redemption. 
-            You can cancel your redemption within 24 hours without coin loss.
+            You can cancel your order within 24 hours without coin loss.
           </Text>
         </View>
       </ScrollView>
       
-      {/* Apply Discount Button */}
+      {/* Redeem Button */}
       <View style={[styles.buttonContainer, { backgroundColor: colors.background }]}>
         <GradientButton
           title="Redeem with Dabbit Coins"
-          onPress={handleApplyDiscount}
+          onPress={handleRedeem}
           colors={colors.primaryGradient}
         />
       </View>
       
-      {/* Confirmation Modal - Completely Rebuilt */}
+      {/* Confirmation Modal */}
       <Modal
         visible={isConfirmationVisible}
         transparent={true}
@@ -214,24 +189,24 @@ export default function EventDetailsScreen() {
           <View style={styles.confirmModalContainer}>
             {/* Header */}
             <View style={styles.confirmModalHeader}>
-              <Text style={styles.confirmModalTitle}>Confirm Redemption</Text>
+              <Text style={styles.confirmModalTitle}>Confirm Order</Text>
             </View>
             
             {/* Content */}
             <View style={styles.confirmModalContent}>
-              {/* Event Name */}
+              {/* Product Name */}
               <View style={styles.confirmModalRow}>
-                <Text style={styles.confirmModalLabel}>Event:</Text>
+                <Text style={styles.confirmModalLabel}>Product:</Text>
                 <Text style={styles.confirmModalValue} numberOfLines={1} ellipsizeMode="tail">
-                  {event.name}
+                  {goodie.name}
                 </Text>
               </View>
               
-              {/* Points to Use */}
+              {/* Coins to Use */}
               <View style={styles.confirmModalRow}>
                 <Text style={styles.confirmModalLabel}>Coins to Use:</Text>
                 <Text style={styles.confirmModalValue}>
-                  {EXPERIENCE_COIN_COST} DC
+                  {goodie.pointsCost} DC
                 </Text>
               </View>
               
@@ -239,7 +214,7 @@ export default function EventDetailsScreen() {
               <View style={styles.confirmModalRow}>
                 <Text style={styles.confirmModalLabel}>Remaining Balance:</Text>
                 <Text style={styles.confirmModalValue}>
-                  {MOCK_COINS - EXPERIENCE_COIN_COST} DC
+                  {MOCK_COINS - goodie.pointsCost} DC
                 </Text>
               </View>
               
@@ -250,7 +225,7 @@ export default function EventDetailsScreen() {
               <View style={styles.confirmModalRow}>
                 <Text style={styles.confirmModalLabel}>You Save:</Text>
                 <Text style={styles.confirmModalSavings}>
-                  ₹{savingsAmount}
+                  ₹{goodie.originalPrice - goodie.discountedPrice}
                 </Text>
               </View>
             </View>
@@ -258,8 +233,7 @@ export default function EventDetailsScreen() {
             {/* Footer */}
             <View style={styles.confirmModalFooter}>
               <Text style={styles.confirmModalNote}>
-                Are you sure you want to redeem this experience?
-                This will use {EXPERIENCE_COIN_COST} Dabbit Coins from your balance.
+                Proceed to place your order? Delivery address can be confirmed on the next screen.
               </Text>
               
               <View style={styles.confirmModalButtons}>
@@ -282,7 +256,7 @@ export default function EventDetailsScreen() {
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                   >
-                    <Text style={styles.confirmModalConfirmText}>Confirm</Text>
+                    <Text style={styles.confirmModalConfirmText}>Place Order</Text>
                   </LinearGradient>
                 </TouchableOpacity>
               </View>
@@ -312,27 +286,27 @@ export default function EventDetailsScreen() {
             </View>
             
             <Text style={[styles.successTitle, { color: colors.text }]}>
-              Success!
+              Order Placed!
             </Text>
             
             <Text style={[styles.successMessage, { color: colors.textSecondary }]}>
-              Your discount has been applied.
-              Your redemption code is:
+              Your order has been successfully placed.
+              Your order number is:
             </Text>
             
             <View style={[styles.codeContainer, { backgroundColor: colors.background }]}>
               <Text style={[styles.redemptionCode, { color: colors.text }]}>
-                {redemptionCode}
+                {orderNumber}
               </Text>
             </View>
             
-            <Text style={[styles.instructionsText, { color: colors.textSecondary }]}>
-              Show this code at the venue to get your discount.
-              Valid for 30 days.
+            <Text style={[styles.shippingNote, { color: colors.textSecondary }]}>
+              We'll ship your order to your registered address.
+              You can track your order from the Orders section.
             </Text>
             
             <GradientButton
-              title="Find More Events"
+              title="Done"
               onPress={() => {
                 setIsSuccessVisible(false);
                 router.back();
@@ -354,20 +328,22 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: metrics.spacing.l,
     paddingVertical: metrics.spacing.m,
   },
-  headerTitle: {
-    fontSize: metrics.fontSize.xl,
-    fontWeight: '600',
-    flex: 1,
-    marginLeft: metrics.spacing.s,
-  },
   backButton: {
-    padding: metrics.spacing.s,
-    marginLeft: -metrics.spacing.s,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  pointsContainer: {
+  headerTitle: {
+    fontSize: metrics.fontSize.l,
+    fontWeight: '600',
+  },
+  coinsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(251, 191, 36, 0.1)',
@@ -375,38 +351,27 @@ const styles = StyleSheet.create({
     paddingVertical: metrics.spacing.s,
     borderRadius: metrics.borderRadius.medium,
   },
-  pointsText: {
+  coinsText: {
     color: '#FBBF24',
     fontWeight: '600',
     marginLeft: metrics.spacing.xs,
   },
-  eventImage: {
+  goodieImage: {
     width: '100%',
-    height: 240,
+    height: 250,
+    backgroundColor: '#E0E0E0',
   },
   contentContainer: {
     padding: metrics.spacing.l,
   },
-  eventTitle: {
-    fontSize: metrics.fontSize.xxl,
+  goodieTitle: {
+    fontSize: 24,
     fontWeight: '700',
     marginBottom: metrics.spacing.m,
   },
-  detailsContainer: {
-    marginBottom: metrics.spacing.l,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: metrics.spacing.s,
-  },
-  detailText: {
-    marginLeft: metrics.spacing.m,
-    fontSize: metrics.fontSize.m,
-  },
   divider: {
     height: 1,
-    marginVertical: metrics.spacing.l,
+    marginVertical: metrics.spacing.m,
   },
   priceContainer: {
     marginBottom: metrics.spacing.l,
@@ -426,6 +391,7 @@ const styles = StyleSheet.create({
   },
   priceValue: {
     fontSize: metrics.fontSize.m,
+    fontWeight: '500',
   },
   discountValue: {
     fontSize: metrics.fontSize.m,
@@ -458,9 +424,14 @@ const styles = StyleSheet.create({
     fontSize: metrics.fontSize.m,
     lineHeight: 22,
   },
-  eventDescription: {
+  goodieDescription: {
     fontSize: metrics.fontSize.m,
     lineHeight: 24,
+    marginBottom: metrics.spacing.l,
+  },
+  shippingCard: {
+    borderRadius: metrics.borderRadius.large,
+    padding: metrics.spacing.l,
     marginBottom: metrics.spacing.l,
   },
   termsText: {
@@ -491,134 +462,6 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
-  modalHeader: {
-    marginBottom: metrics.spacing.m,
-  },
-  modalTitle: {
-    fontSize: metrics.fontSize.xl,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  confirmationDetails: {
-    marginBottom: metrics.spacing.l,
-  },
-  confirmationRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: metrics.spacing.m,
-  },
-  confirmationLabel: {
-    fontSize: metrics.fontSize.m,
-    flex: 1,
-  },
-  confirmationValue: {
-    fontSize: metrics.fontSize.m,
-    fontWeight: '500',
-    marginLeft: metrics.spacing.m,
-  },
-  savingsValue: {
-    fontSize: metrics.fontSize.m,
-    fontWeight: '600',
-  },
-  policyText: {
-    fontSize: metrics.fontSize.s,
-    textAlign: 'center',
-    marginBottom: metrics.spacing.l,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: metrics.spacing.m,
-    paddingHorizontal: metrics.spacing.l,
-    borderRadius: metrics.borderRadius.large,
-    borderWidth: 1,
-    marginRight: metrics.spacing.s,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: metrics.fontSize.m,
-    fontWeight: '500',
-  },
-  confirmButton: {
-    flex: 1,
-    marginLeft: metrics.spacing.s,
-  },
-  successModalContent: {
-    alignItems: 'center',
-    paddingTop: metrics.spacing.xxl,
-    paddingBottom: metrics.spacing.xl,
-  },
-  successIconContainer: {
-    marginBottom: metrics.spacing.l,
-  },
-  successIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  successTitle: {
-    fontSize: metrics.fontSize.xxl,
-    fontWeight: '700',
-    marginBottom: metrics.spacing.m,
-  },
-  successMessage: {
-    fontSize: metrics.fontSize.m,
-    textAlign: 'center',
-    marginBottom: metrics.spacing.l,
-    paddingHorizontal: metrics.spacing.m,
-    lineHeight: 22,
-  },
-  codeContainer: {
-    paddingVertical: metrics.spacing.m,
-    paddingHorizontal: metrics.spacing.xl,
-    borderRadius: metrics.borderRadius.medium,
-    marginBottom: metrics.spacing.l,
-    width: '80%',
-    alignItems: 'center',
-  },
-  redemptionCode: {
-    fontSize: 24,
-    fontWeight: '700',
-    letterSpacing: 2,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    marginBottom: metrics.spacing.l,
-    justifyContent: 'center',
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: metrics.spacing.m,
-    paddingHorizontal: metrics.spacing.l,
-    borderRadius: metrics.borderRadius.large,
-    marginHorizontal: metrics.spacing.s,
-    borderWidth: 1,
-  },
-  actionButtonText: {
-    fontSize: metrics.fontSize.m,
-    fontWeight: '500',
-    marginLeft: metrics.spacing.s,
-  },
-  validityText: {
-    fontSize: metrics.fontSize.s,
-    marginBottom: metrics.spacing.l,
-  },
-  findMoreButton: {
-    width: '100%',
-  },
-  // New Confirmation Modal Styles - Complete Rebuild
   confirmModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
@@ -728,8 +571,58 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: 'white',
   },
-  instructionsText: {
-    fontSize: metrics.fontSize.s,
+  successModalContent: {
+    alignItems: 'center',
+    paddingTop: metrics.spacing.xxl,
+    paddingBottom: metrics.spacing.xl,
+  },
+  successIconContainer: {
     marginBottom: metrics.spacing.l,
+  },
+  successIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  successTitle: {
+    fontSize: metrics.fontSize.xxl,
+    fontWeight: '700',
+    marginBottom: metrics.spacing.m,
+  },
+  successMessage: {
+    fontSize: metrics.fontSize.m,
+    textAlign: 'center',
+    marginBottom: metrics.spacing.l,
+    paddingHorizontal: metrics.spacing.m,
+    lineHeight: 22,
+  },
+  codeContainer: {
+    paddingVertical: metrics.spacing.m,
+    paddingHorizontal: metrics.spacing.xl,
+    borderRadius: metrics.borderRadius.medium,
+    marginBottom: metrics.spacing.l,
+    width: '80%',
+    alignItems: 'center',
+  },
+  redemptionCode: {
+    fontSize: 24,
+    fontWeight: '700',
+    letterSpacing: 2,
+  },
+  shippingNote: {
+    fontSize: metrics.fontSize.s,
+    textAlign: 'center',
+    marginBottom: metrics.spacing.l,
+    paddingHorizontal: metrics.spacing.l,
+  },
+  findMoreButton: {
+    width: '100%',
   },
 }); 

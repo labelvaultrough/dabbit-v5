@@ -194,6 +194,23 @@ export default function SettingsScreen() {
         
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+            REWARDS
+          </Text>
+          
+          <SettingsItem
+            title="Points & Rewards"
+            subtitle="Redeem points for event discounts"
+            icon="award"
+            iconColor={colors.categories.amber}
+            onPress={() => {
+              // Simply remove this option since rewards is now a tab
+              // Users can access it from the bottom navigation
+            }}
+          />
+        </View>
+        
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
             DATA
           </Text>
           

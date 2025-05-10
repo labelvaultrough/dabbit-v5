@@ -49,4 +49,25 @@ export interface Redemption {
   timestamp: string;
   status: 'active' | 'used' | 'expired';
   redemptionCode: string;
+}
+
+export interface Subscription {
+  id: string;
+  name: string;
+  description: string;
+  duration: string;
+  originalPrice: number;
+  discountedPrice: number;
+  pointsCost: number;
+  imageUrl: string;
+}
+
+export interface GoodieItem {
+  id: string;
+  name: string;
+  description: string;
+  originalPrice: number;
+  discountedPrice: number;
+  pointsCost: number;
+  imageUrl: string;
 } 
