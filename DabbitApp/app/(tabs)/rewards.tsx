@@ -16,47 +16,61 @@ import DabbitCoinsCard from '@/components/PointsInsightsCard';
 // Mock coins value
 const MOCK_COINS = 450;
 
+// Mock volunteering events
+const MOCK_VOLUNTEERING = [
+  {
+    id: '1',
+    name: 'Beach Clean-up Drive',
+    description: 'Help clean the local beach and earn Dabbit Coins',
+    date: '2025-06-10',
+    location: { name: 'Juhu Beach', city: 'Mumbai' },
+    duration: '3 hours',
+    coinsEarnable: 200,
+    imageUrl: 'https://images.unsplash.com/photo-1618477461853-cf6ed80faba5?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: '2',
+    name: 'Food Distribution Drive',
+    description: 'Distribute food packages to the homeless',
+    date: '2025-06-15',
+    location: { name: 'City Center', city: 'Delhi' },
+    duration: '4 hours',
+    coinsEarnable: 250,
+    imageUrl: 'https://images.unsplash.com/photo-1593113598332-cd59c036b8ce?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: '3',
+    name: 'Tree Planting Initiative',
+    description: 'Plant trees in your local community park',
+    date: '2025-06-20',
+    location: { name: 'Central Park', city: 'Bangalore' },
+    duration: '5 hours',
+    coinsEarnable: 300,
+    imageUrl: 'https://images.unsplash.com/photo-1552820728-8b83bb6b773f?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
+  },
+];
+
+// Tab options
+const TABS = [
+  { id: 'experiences', label: 'Experiences', icon: 'compass' as const },
+  { id: 'subscriptions', label: 'Subscriptions', icon: 'smartphone' as const },
+  { id: 'goodies', label: 'Goodies', icon: 'gift' as const },
+  { id: 'earn', label: 'Earn', icon: 'award' as const },
+];
+
 export default function RewardsScreen() {
   const { colors } = useTheme();
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState('experiences');
   
   // Calculate screen width for proper two-column layout
   const screenWidth = Dimensions.get('window').width;
   const itemWidth = (screenWidth - (metrics.spacing.l * 3)) / 2; // Two items per row with margins
   
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <StatusBar style="auto" />
-      
-      <Stack.Screen options={{ headerShown: false }} />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Dabbit Coins
-        </Text>
-        
-        <View style={styles.coinsContainer}>
-          <Feather name="dollar-sign" size={20} color="#FBBF24" />
-          <Text style={styles.coinsText}>{MOCK_COINS} DC</Text>
-        </View>
-      </View>
-      
-      {/* Main Content */}
-      <ScrollView 
-        showsVerticalScrollIndicator={false}
-        style={styles.mainContent}
-        contentContainerStyle={styles.mainContentContainer}
-      >
-        {/* Dabbit Coins Card */}
-        <DabbitCoinsCard currentCoins={MOCK_COINS} />
-        
-        {/* Experiences Section - Changed from "Events" */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Experiences You Can Redeem
-          </Text>
-          
+  const renderTabContent = () => {
+    switch(activeTab) {
+      case 'experiences':
+        return (
           <View style={styles.experiencesGrid}>
             {MOCK_EVENTS.map((event) => (
               <TouchableOpacity 
@@ -109,14 +123,10 @@ export default function RewardsScreen() {
               </TouchableOpacity>
             ))}
           </View>
-        </View>
-        
-        {/* Subscriptions Section */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Subscriptions
-          </Text>
-          
+        );
+      
+      case 'subscriptions':
+        return (
           <View style={styles.subscriptionsGrid}>
             {MOCK_SUBSCRIPTIONS && MOCK_SUBSCRIPTIONS.length > 0 ? (
               MOCK_SUBSCRIPTIONS.map((subscription) => (
@@ -178,14 +188,10 @@ export default function RewardsScreen() {
               </View>
             )}
           </View>
-        </View>
-        
-        {/* Goodies Section */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Goodies
-          </Text>
-          
+        );
+      
+      case 'goodies':
+        return (
           <View style={styles.goodiesGrid}>
             {MOCK_GOODIES && MOCK_GOODIES.length > 0 ? (
               MOCK_GOODIES.map((goodie) => (
@@ -247,6 +253,157 @@ export default function RewardsScreen() {
               </View>
             )}
           </View>
+        );
+      
+      case 'earn':
+        return (
+          <View style={styles.earnGrid}>
+            {MOCK_VOLUNTEERING.map((opportunity) => (
+              <TouchableOpacity 
+                key={opportunity.id} 
+                style={[styles.itemCard, { width: itemWidth, backgroundColor: colors.surface }]}
+                onPress={() => router.back()}
+              >
+                <View style={[styles.cardImageContainer, { backgroundColor: '#e0e0e0' }]}>
+                  <Image 
+                    source={{ uri: opportunity.imageUrl }}
+                    style={styles.cardImage}
+                    resizeMode="cover"
+                  />
+                  <LinearGradient
+                    colors={['rgba(0,0,0,0.5)', 'transparent']}
+                    style={styles.imageGradient}
+                    start={{x: 0, y: 0}}
+                    end={{x: 0, y: 0.6}}
+                  />
+                </View>
+                
+                <View style={styles.cardContentContainer}>
+                  <Text style={[styles.itemTitle, { color: colors.text }]} numberOfLines={2}>
+                    {opportunity.name}
+                  </Text>
+                  
+                  <Text style={[styles.itemDescription, { color: colors.textSecondary }]} numberOfLines={2}>
+                    {opportunity.description}
+                  </Text>
+                  
+                  <View style={styles.earnDetailsRow}>
+                    <View style={styles.earnDetailsItem}>
+                      <Feather name="calendar" size={12} color={colors.textSecondary} />
+                      <Text style={[styles.earnDetailsText, { color: colors.textSecondary }]}>
+                        {opportunity.date}
+                      </Text>
+                    </View>
+                    <View style={styles.earnDetailsItem}>
+                      <Feather name="clock" size={12} color={colors.textSecondary} />
+                      <Text style={[styles.earnDetailsText, { color: colors.textSecondary }]}>
+                        {opportunity.duration}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <View style={[styles.earnCoinsContainer, { backgroundColor: 'rgba(251, 191, 36, 0.1)' }]}>
+                    <Feather name="dollar-sign" size={14} color="#FBBF24" />
+                    <Text style={styles.earnCoinsText}>
+                      Earn {opportunity.coinsEarnable} DC
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        );
+      
+      default:
+        return null;
+    }
+  };
+  
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      <StatusBar style="auto" />
+      
+      <Stack.Screen options={{ headerShown: false }} />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          Dabbit Coins
+        </Text>
+        
+        <View style={styles.coinsContainer}>
+          <Feather name="dollar-sign" size={20} color="#FBBF24" />
+          <Text style={styles.coinsText}>{MOCK_COINS} DC</Text>
+        </View>
+      </View>
+      
+      {/* Main Content */}
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        style={styles.mainContent}
+        contentContainerStyle={styles.mainContentContainer}
+      >
+        {/* Dabbit Coins Card */}
+        <DabbitCoinsCard currentCoins={MOCK_COINS} />
+        
+        {/* Spacer */}
+        <View style={styles.spacer} />
+        
+        {/* Category Tabs */}
+        <Text style={[styles.sectionTitle, { color: colors.text, marginHorizontal: metrics.spacing.l, marginBottom: metrics.spacing.m }]}>
+          Marketplace
+        </Text>
+        
+        <ScrollView 
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabsContainer}
+        >
+          {TABS.map((tab) => (
+            <TouchableOpacity
+              key={tab.id}
+              style={[
+                styles.tabButton,
+                activeTab === tab.id && styles.activeTabButton,
+                { 
+                  backgroundColor: activeTab === tab.id 
+                    ? colors.primary 
+                    : colors.surface,
+                  borderColor: colors.primary
+                }
+              ]}
+              onPress={() => setActiveTab(tab.id)}
+            >
+              <Feather 
+                name={tab.icon} 
+                size={16} 
+                color={activeTab === tab.id ? '#FFF' : colors.primary} 
+              />
+              <Text 
+                style={[
+                  styles.tabText,
+                  { color: activeTab === tab.id ? '#FFF' : colors.primary }
+                ]}
+              >
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+        
+        {/* Spacer */}
+        <View style={styles.smallSpacer} />
+        
+        {/* Tab Content */}
+        <View style={styles.tabContent}>
+          <Text style={[styles.sectionTitle, { color: colors.text, marginHorizontal: metrics.spacing.l, marginBottom: metrics.spacing.m }]}>
+            {activeTab === 'experiences' && 'Experiences You Can Redeem'}
+            {activeTab === 'subscriptions' && 'Premium Subscriptions'}
+            {activeTab === 'goodies' && 'Wellness Products'}
+            {activeTab === 'earn' && 'Volunteer & Earn Coins'}
+          </Text>
+          
+          {renderTabContent()}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -287,6 +444,12 @@ const styles = StyleSheet.create({
   mainContentContainer: {
     paddingBottom: metrics.spacing.xl,
   },
+  spacer: {
+    height: metrics.spacing.xl,
+  },
+  smallSpacer: {
+    height: metrics.spacing.m,
+  },
   section: {
     marginBottom: metrics.spacing.l,
   },
@@ -295,6 +458,29 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginHorizontal: metrics.spacing.l,
     marginBottom: metrics.spacing.m,
+  },
+  tabsContainer: {
+    paddingHorizontal: metrics.spacing.l,
+    paddingBottom: metrics.spacing.m,
+  },
+  tabButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: metrics.spacing.s,
+    paddingHorizontal: metrics.spacing.m,
+    borderRadius: 50, // Large value for oval shape
+    marginRight: metrics.spacing.m,
+    borderWidth: 1,
+  },
+  activeTabButton: {
+    borderWidth: 0,
+  },
+  tabText: {
+    marginLeft: metrics.spacing.xs,
+    fontWeight: '600',
+  },
+  tabContent: {
+    flex: 1,
   },
   experiencesGrid: {
     flexDirection: 'row',
@@ -444,5 +630,40 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     paddingHorizontal: metrics.spacing.l,
+  },
+  earnGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: metrics.spacing.l,
+  },
+  earnDetailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: metrics.spacing.m,
+  },
+  earnDetailsItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  earnDetailsText: {
+    fontSize: metrics.fontSize.xs,
+    marginLeft: metrics.spacing.xs,
+  },
+  earnCoinsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingVertical: metrics.spacing.xs,
+    paddingHorizontal: metrics.spacing.m,
+    borderRadius: metrics.borderRadius.medium,
+    borderWidth: 1,
+    borderColor: 'rgba(251, 191, 36, 0.3)',
+  },
+  earnCoinsText: {
+    color: '#FBBF24',
+    fontWeight: '600',
+    fontSize: metrics.fontSize.s,
+    marginLeft: metrics.spacing.xs,
   },
 }); 
